@@ -33,8 +33,8 @@ namespace DirectXViewer
 	ID3D11Buffer*				cbuffer_vs_p = nullptr;
 	ID3D11Buffer*				cbuffer_ps_p = nullptr;
 
-	ID3D11VertexShader*			shader_vertex_p;
-	ID3D11PixelShader*			shader_pixel_p;
+	ID3D11VertexShader*			shader_vertex_p = nullptr;
+	ID3D11PixelShader*			shader_pixel_p = nullptr;
 
 	D3D11_VIEWPORT				viewport;
 
@@ -173,7 +173,27 @@ namespace DirectXViewer
 	}
 	void Cleanup()
 	{
+#define RELEASE(p) if (p) p->Release()
 
+		RELEASE(shader_pixel_p);
+		RELEASE(shader_vertex_p);
+
+		RELEASE(cbuffer_ps_p);
+		RELEASE(cbuffer_vs_p);
+
+		RELEASE(samplerLinear_p);
+
+		RELEASE(vertexLayout_p);
+
+		RELEASE(depthStencilView_p);
+		RELEASE(depthStencil_p);
+		RELEASE(renderTargetView_p);
+
+		RELEASE(swapChain_p);
+		RELEASE(deviceContext_p);
+		RELEASE(device_p);
+
+#undef RELEASE(p)
 	}
 
 
