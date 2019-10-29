@@ -45,6 +45,9 @@ namespace DirectXViewer
 	std::vector<DXVOBJECT*>		sceneObjects;
 
 
+	const char* errormsg;
+
+
 	// TEST
 	DXVVERTEX testverts[] =
 	{
@@ -57,8 +60,8 @@ namespace DirectXViewer
 		0, 1, 2
 	};
 
-	ID3D11Buffer* testvbuf_p = nullptr;
-	ID3D11Buffer* testibuf_p = nullptr;
+	DXVMESHDATA* testmeshdata_p = nullptr;
+	DXVMESH* testmesh_p = nullptr;
 	// TEST
 
 
@@ -159,23 +162,15 @@ namespace DirectXViewer
 
 
 		// TEST
-		D3D11_BUFFER_DESC desc = {};
-		desc.ByteWidth = sizeof(DXVVERTEX) * 3;
-		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		desc.CPUAccessFlags = 0;
-		D3D11_SUBRESOURCE_DATA subData = {};
-		subData.pSysMem = testverts;
-		hr = device_p->CreateBuffer(&desc, &subData, &testvbuf_p);
+		testmeshdata_p = new DXVMESHDATA;
+		testmesh_p = new DXVMESH;
 
-		desc = {};
-		desc.ByteWidth = sizeof(uint32_t) * 3;
-		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		desc.CPUAccessFlags = 0;
-		subData = {};
-		subData.pSysMem = testinds;
-		return device_p->CreateBuffer(&desc, &subData, &testibuf_p);
+		testmeshdata_p->vertexCount = ARRAYSIZE(testverts);
+		testmeshdata_p->vertices = testverts;
+		testmeshdata_p->indexCount = ARRAYSIZE(testinds);
+		testmeshdata_p->indices = testinds;
+
+		hr = DXVCreateMesh(testmeshdata_p, &testmesh_p);
 		// TEST
 
 
@@ -215,9 +210,9 @@ namespace DirectXViewer
 
 
 		// TEST
-		deviceContext_p->IASetVertexBuffers(0, 1, &testvbuf_p, strides, offsets);
-		deviceContext_p->IASetIndexBuffer(testibuf_p, DXGI_FORMAT_R32_UINT, 0);
-		deviceContext_p->DrawIndexed(3, 0, 0);
+		deviceContext_p->IASetVertexBuffers(0, 1, &testmesh_p->vertexBuffer_p, strides, offsets);
+		deviceContext_p->IASetIndexBuffer(testmesh_p->indexBuffer_p, DXGI_FORMAT_R32_UINT, 0);
+		deviceContext_p->DrawIndexed(testmesh_p->indexCount, 0, 0);
 		// TEST
 
 
@@ -229,8 +224,8 @@ namespace DirectXViewer
 
 
 		// TEST
-		RELEASE(testibuf_p);
-		RELEASE(testvbuf_p);
+		RELEASE(testmesh_p->indexBuffer_p);
+		RELEASE(testmesh_p->vertexBuffer_p);
 		// TEST
 
 
@@ -256,6 +251,9 @@ namespace DirectXViewer
 	}
 
 
+	const char* GetLastError() { return errormsg; }
+
+
 	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
 	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
 	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
@@ -263,6 +261,27 @@ namespace DirectXViewer
 	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
 	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
 	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+
+
+	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp)
+	{
+		HRESULT hr;
+
+		DXVMESH* mesh_p = new DXVMESH;
+
+		mesh_p->vertexCount = _meshdata_p->vertexCount;
+		mesh_p->indexCount = _meshdata_p->indexCount;
+
+		hr = DxCreateVertexBuffer(mesh_p->vertexCount, _meshdata_p->vertices, &mesh_p->vertexBuffer_p);
+		if (FAILED(hr)) return hr;
+
+		hr = DxCreateIndexBuffer(mesh_p->indexCount, _meshdata_p->indices, &mesh_p->indexBuffer_p);
+		if (FAILED(hr)) return hr;
+
+		*_mesh_pp = mesh_p;
+
+		return S_OK;
+	}
 
 
 	void AddObjectToScene(DXVOBJECT* _obj_p) { if (_obj_p != nullptr) sceneObjects.push_back(_obj_p); }
@@ -326,6 +345,28 @@ namespace DirectXViewer
 		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		desc.CPUAccessFlags = 0;
 		return device_p->CreateBuffer(&desc, nullptr, _cbuffer_pp);
+	}
+	HRESULT DxCreateVertexBuffer(uint32_t _vertCount, DXVVERTEX* _verts, ID3D11Buffer** _vbuffer_pp)
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = sizeof(DXVVERTEX) * _vertCount;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		desc.CPUAccessFlags = 0;
+		D3D11_SUBRESOURCE_DATA subData = {};
+		subData.pSysMem = _verts;
+		return device_p->CreateBuffer(&desc, &subData, _vbuffer_pp);
+	}
+	HRESULT DxCreateIndexBuffer(uint32_t _indCount, uint32_t* _inds, ID3D11Buffer** _ibuffer_pp)
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = sizeof(uint32_t) * _indCount;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		desc.CPUAccessFlags = 0;
+		D3D11_SUBRESOURCE_DATA subData = {};
+		subData.pSysMem = _inds;
+		return device_p->CreateBuffer(&desc, &subData, _ibuffer_pp);
 	}
 	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX, float _topLeftY, float _minDepth, float _maxDepth)
 	{

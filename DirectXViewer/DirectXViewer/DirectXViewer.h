@@ -102,6 +102,10 @@ namespace DirectXViewer
 	void Cleanup();
 
 
+	// Returns the last error message generated
+	const char* GetLastError();
+
+
 	// Returns the world matrix
 	XMMATRIX GetWorldMatrix();
 
@@ -120,6 +124,10 @@ namespace DirectXViewer
 
 	// Sets the projection matrix
 	void SetProjectionMatrix(XMMATRIX _m);
+
+
+	// Creates and stores a DXVMESH from a DXVMESHDATA
+	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
 
 
 	// Adds an object to the scene
@@ -150,6 +158,12 @@ namespace DirectXViewer
 
 	// Creates and stores a D3D11 constant buffer
 	HRESULT DxCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp);
+
+	// Creates and stores a D3D11 vertex buffer from a DXV vertex array
+	HRESULT DxCreateVertexBuffer(uint32_t _vertCount, DXVVERTEX* _verts, ID3D11Buffer** _vbuffer_pp);
+
+	// Creates and stores a D3D11 index buffer from a DXV vertex array
+	HRESULT DxCreateIndexBuffer(uint32_t _indCount, uint32_t* _inds, ID3D11Buffer** _ibuffer_pp);
 
 	// Initializes a D3D11 viewport
 	// DEFAULTS:
