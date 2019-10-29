@@ -6,7 +6,7 @@
 
 #include <Windows.h>
 
-#include "DirectXViewer.h"
+#include "viewer.h"
 
 #define MAX_LOADSTRING 100
 
@@ -43,7 +43,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-	if (FAILED(DirectXViewer::Init(&hWnd)))
+	if (FAILED(viewer::Init(&hWnd)))
 	{
 		return FALSE;
 	}
@@ -63,7 +63,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
 		if (msg.message == WM_QUIT)
 			break;
+
+		viewer::Update();
     }
+
+	viewer::Cleanup();
 
     return (int) msg.wParam;
 }
