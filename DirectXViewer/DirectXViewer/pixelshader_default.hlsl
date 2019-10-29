@@ -1,3 +1,10 @@
+#pragma pack_matrix( row_major )
+
+Texture2D tex_diffuse : register(t0);
+Texture2D tex_emissive : register(t1);
+Texture2D tex_specular : register(t2);
+SamplerState sampler_linear : register(s0);
+
 cbuffer ConstantBuffer : register(b1)
 {
 	float4 light_pos;
@@ -28,5 +35,5 @@ PSout main(VSout input)
 
     output.color = float4(1.0f, 1.0f, 1.0f, 0.0f);
 
-	return output;
+    return output;
 }

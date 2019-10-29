@@ -7,6 +7,8 @@
 #pragma comment(lib, "d3d11.lib")
 #include <DirectXMath.h>
 
+#include "colors.h"
+
 
 using namespace DirectX;
 
@@ -118,6 +120,16 @@ namespace DirectXViewer
 
 	// Sets the projection matrix
 	void SetProjectionMatrix(XMMATRIX _m);
+
+
+	// Adds an object to the scene
+	void AddObjectToScene(DXVOBJECT* _obj_p);
+
+	// Returns the specified object from the scene if index is valid
+	DXVOBJECT* GetObjectFromScene(uint16_t _i);
+
+	// Checks the scene for the object specified and removes it if found
+	void RemoveObjectFromScene(DXVOBJECT* _obj_p);
 
 
 	// Creates and stores a D3D11 depth stencil and corresponding depth stencil view

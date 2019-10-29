@@ -45,10 +45,26 @@ namespace DirectXViewer
 	std::vector<DXVOBJECT*>		sceneObjects;
 
 
+	// TEST
+	DXVVERTEX testverts[] =
+	{
+		{ { -1, 0, 0 }, { 0, 0, -1 }, {}, {} },
+		{ { 0, 1, 0 }, { 0, 0, -1 }, {}, {} },
+		{ { 1, 0, 0 }, { 0, 0, -1 }, {}, {} }
+	};
+	uint32_t testinds[] =
+	{
+		0, 1, 2
+	};
+
+	ID3D11Buffer* testvbuf_p = nullptr;
+	ID3D11Buffer* testibuf_p = nullptr;
+	// TEST
+
 
 	HRESULT Init(HWND* _hWnd_p)
 	{
-		HRESULT hr = S_OK;
+		HRESULT hr;
 
 		hWnd_p = _hWnd_p;
 
@@ -134,12 +150,33 @@ namespace DirectXViewer
 		// initialize matrix values
 		SetWorldMatrix(XMMatrixIdentity());
 
-		XMVECTOR eye = { 0.0f, 3.0f, -5.0f, 1.0f };
-		XMVECTOR at = { 0.0f, 3.0f, 5.0f, 1.0f };
-		XMVECTOR up = { 0.0f, 1.0f, 0.0f, 1.0f };
+		XMVECTOR eye = { 0, 5, -5 };
+		XMVECTOR at = { 0, 0, 0 };
+		XMVECTOR up = { 0, 1, 0 };
 		SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
 		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (FLOAT)windowHeight, 0.01f, 100.0f));
+
+
+		// TEST
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = sizeof(DXVVERTEX) * 3;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		desc.CPUAccessFlags = 0;
+		D3D11_SUBRESOURCE_DATA subData = {};
+		subData.pSysMem = testverts;
+		hr = device_p->CreateBuffer(&desc, &subData, &testvbuf_p);
+
+		desc = {};
+		desc.ByteWidth = sizeof(uint32_t) * 3;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		desc.CPUAccessFlags = 0;
+		subData = {};
+		subData.pSysMem = testinds;
+		return device_p->CreateBuffer(&desc, &subData, &testibuf_p);
+		// TEST
 
 
 		return hr;
@@ -149,31 +186,53 @@ namespace DirectXViewer
 	}
 	void Draw()
 	{
+		float clearcolor[] = BLACK;
+
 		uint32_t strides[] = { sizeof(DXVVERTEX) };
 		uint32_t offsets[] = { 0 };
 
 		DXVCBUFFER_VS cbuffer_vs = {};
 		DXVCBUFFER_PS cbuffer_ps = {};
 
-		cbuffer_vs.world = XMLoadFloat4x4(&world);
-		cbuffer_vs.view = XMLoadFloat4x4(&view);
-		cbuffer_vs.projection = XMLoadFloat4x4(&projection);
-
-		float clearcolor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
 		deviceContext_p->RSSetViewports(1, &viewport);
 		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
 		deviceContext_p->VSSetConstantBuffers(0, 1, &cbuffer_vs_p);
 		deviceContext_p->VSSetConstantBuffers(1, 1, &cbuffer_ps_p);
 		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearcolor);
+		deviceContext_p->ClearDepthStencilView(depthStencilView_p, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+		cbuffer_vs.world = XMLoadFloat4x4(&world);
+		cbuffer_vs.view = XMLoadFloat4x4(&view);
+		cbuffer_vs.projection = XMLoadFloat4x4(&projection);
 
 		deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0);
+		deviceContext_p->UpdateSubresource(cbuffer_ps_p, 0, nullptr, &cbuffer_ps, 0, 0);
+
+		deviceContext_p->VSSetShader(shader_vertex_p, 0, 0);
+		deviceContext_p->PSSetShader(shader_pixel_p, 0, 0);
+
+		deviceContext_p->PSSetSamplers(0, 1, &samplerLinear_p);
+
+
+		// TEST
+		deviceContext_p->IASetVertexBuffers(0, 1, &testvbuf_p, strides, offsets);
+		deviceContext_p->IASetIndexBuffer(testibuf_p, DXGI_FORMAT_R32_UINT, 0);
+		deviceContext_p->DrawIndexed(3, 0, 0);
+		// TEST
+
 
 		swapChain_p->Present(1, 0);
 	}
 	void Cleanup()
 	{
 #define RELEASE(p) if (p) p->Release()
+
+
+		// TEST
+		RELEASE(testibuf_p);
+		RELEASE(testvbuf_p);
+		// TEST
+
 
 		RELEASE(shader_pixel_p);
 		RELEASE(shader_vertex_p);
@@ -204,6 +263,19 @@ namespace DirectXViewer
 	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
 	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
 	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+
+
+	void AddObjectToScene(DXVOBJECT* _obj_p) { if (_obj_p != nullptr) sceneObjects.push_back(_obj_p); }
+	DXVOBJECT* GetObjectFromScene(uint16_t _i) { return sceneObjects[_i]; }
+	void RemoveObjectFromScene(DXVOBJECT* _obj_p)
+	{
+		for (uint32_t i = 0; i < sceneObjects.size(); i++)
+			if (sceneObjects[i] == _obj_p)
+			{
+				sceneObjects.erase(sceneObjects.begin() + i);
+				break;
+			}
+	}
 
 
 	HRESULT DxCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp)

@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="colors.h" />
     <ClInclude Include="DirectXViewer.h" />
     <ClInclude Include="Interface.h" />
     <ClInclude Include="Resource.h" />
