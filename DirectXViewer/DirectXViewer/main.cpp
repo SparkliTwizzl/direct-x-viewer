@@ -2,6 +2,8 @@
 //
 
 #include "Resource.h"
+#include "targetver.h"
+
 #include <Windows.h>
 
 #include "DirectXViewer.h"
