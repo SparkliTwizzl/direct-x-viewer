@@ -42,8 +42,6 @@ namespace DirectXViewer
 	XMMATRIX GetWorldMatrix();
 
 	// Returns the view matrix
-	// NOTES:
-	//  Matrix is stored uninverted for ease of manipulation.
 	XMMATRIX GetViewMatrix();
 
 	// Returns the projection matrix
@@ -54,9 +52,6 @@ namespace DirectXViewer
 	void SetWorldMatrix(XMMATRIX _m);
 
 	// Sets the view matrix
-	// NOTES:
-	//  Matrix is automatically inverted when passed to constant buffer.
-	//  Make sure matrix passed to this function is uninverted.
 	void SetViewMatrix(XMMATRIX _m);
 
 	// Sets the projection matrix

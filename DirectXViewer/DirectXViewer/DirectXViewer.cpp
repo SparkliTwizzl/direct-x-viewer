@@ -131,8 +131,8 @@ namespace DirectXViewer
 		SetWorldMatrix(XMMatrixIdentity());
 
 		XMVECTOR eye = { 0.0f, 3.0f, -5.0f, 1.0f };
-		XMVECTOR at = { 0.0f, 3.0f, 5.0f, 1.0f};
-		XMVECTOR up = { 0.0f, 1.0f, 0.0f, 1.0f};
+		XMVECTOR at = { 0.0f, 3.0f, 5.0f, 1.0f };
+		XMVECTOR up = { 0.0f, 1.0f, 0.0f, 1.0f };
 		SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
 		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (FLOAT)windowHeight, 0.01f, 100.0f));
@@ -143,12 +143,11 @@ namespace DirectXViewer
 
 
 	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
-	XMMATRIX GetViewMatrix() { return XMMatrixInverse(nullptr, XMLoadFloat4x4(&view)); }
+	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
 	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
 
-
 	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
-	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, XMMatrixInverse(nullptr, _m)); }
+	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
 	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
 
 
@@ -177,7 +176,6 @@ namespace DirectXViewer
 		dsvDesc.Texture2D.MipSlice = 0;
 		return device_p->CreateDepthStencilView(*_depthStencil_pp, &dsvDesc, _depthStencilView_pp);
 	}
-
 	HRESULT DxCreateSamplerState(
 		ID3D11SamplerState** _samplerState_pp, D3D11_FILTER _filter,
 		D3D11_TEXTURE_ADDRESS_MODE _addressU, D3D11_TEXTURE_ADDRESS_MODE _addressV,
@@ -193,7 +191,6 @@ namespace DirectXViewer
 		desc.MaxLOD = _maxLod;
 		return device_p->CreateSamplerState(&desc, &samplerLinear_p);
 	}
-
 	HRESULT DxCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp)
 	{
 		D3D11_BUFFER_DESC desc = {};
@@ -203,7 +200,6 @@ namespace DirectXViewer
 		desc.CPUAccessFlags = 0;
 		return device_p->CreateBuffer(&desc, nullptr, _cbuffer_pp);
 	}
-
 	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX, float _topLeftY, float _minDepth, float _maxDepth)
 	{
 		_viewport_p->Width = _w;
