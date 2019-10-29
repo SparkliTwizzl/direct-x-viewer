@@ -13,6 +13,7 @@ using namespace DirectX;
 
 namespace DirectXViewer
 {
+	// DXV vertex data container
 	struct DXVVERTEX
 	{
 		XMFLOAT3 pos;
@@ -21,6 +22,7 @@ namespace DirectXViewer
 		XMFLOAT2 uv;
 	};
 
+	// DXV mesh data container
 	struct DXVMESHDATA
 	{
 		uint32_t vertexCount = 0;
@@ -29,6 +31,9 @@ namespace DirectXViewer
 		uint32_t* indices = nullptr;
 	};
 
+	// DXV rendering mesh
+	// NOTES:
+	//  Must be contained in a DXVOBJECT along with a DXVMATERIAL
 	struct DXVMESH
 	{
 		uint32_t vertexCount = 0;
@@ -37,16 +42,21 @@ namespace DirectXViewer
 		ID3D11Buffer* indexBuffer_p = nullptr;
 	};
 
+	// DXV material data container
 	struct DXVMATERIALDATA
 	{
 
 	};
 
+	// DXV rendering material
+	// NOTES:
+	//  Must be contained in a DXVOBJECT along with a DXVMESH
 	struct DXVMATERIAL
 	{
 
 	};
 
+	// DXV rendering object
 	struct DXVOBJECT
 	{
 		DXVMESH* mesh = nullptr;
