@@ -34,6 +34,9 @@ VSout main(VSin input)
     output.pos = mul(output.world_pos, view);
     output.pos = mul(output.pos, projection);
 
+    // dot products might need to have order swapped
+    // if they were written for column-major matrices
+    // since this shader uses row-major
     output.eye_pos.x = -dot(view[3].xyz, view[0].xyz);
     output.eye_pos.y = -dot(view[3].xyz, view[1].xyz);
     output.eye_pos.z = -dot(view[3].xyz, view[2].xyz);

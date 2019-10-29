@@ -31,6 +31,9 @@ namespace DirectXViewer
 	ID3D11Buffer*				cbuffer_vs_p = nullptr;
 	ID3D11Buffer*				cbuffer_ps_p = nullptr;
 
+	ID3D11VertexShader*			shader_vertex_p;
+	ID3D11PixelShader*			shader_pixel_p;
+
 
 
 	HRESULT Init(HWND* _hWnd_p)
@@ -102,6 +105,13 @@ namespace DirectXViewer
 		if (FAILED(hr)) return hr;
 
 		hr = DxCreateConstantBuffer(sizeof(CBUFFER_PS_DATA), &cbuffer_ps_p);
+		if (FAILED(hr)) return hr;
+
+		// create D3D shaders
+		hr = device_p->CreateVertexShader(vertexshader_default, sizeof(vertexshader_default), nullptr, &shader_vertex_p);
+		if (FAILED(hr)) return hr;
+
+		hr = device_p->CreatePixelShader(pixelshader_default, sizeof(pixelshader_default), nullptr, &shader_pixel_p);
 		if (FAILED(hr)) return hr;
 
 
