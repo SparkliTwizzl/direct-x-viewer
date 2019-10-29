@@ -13,8 +13,48 @@ using namespace DirectX;
 
 namespace DirectXViewer
 {
+	struct DXVVERTEX
+	{
+		XMFLOAT3 pos;
+		XMFLOAT3 norm;
+		XMFLOAT4 color;
+		XMFLOAT2 uv;
+	};
+
+	struct DXVMESHDATA
+	{
+		uint32_t vertexCount = 0;
+		uint32_t indexCount = 0;
+		DXVVERTEX* vertices = nullptr;
+		uint32_t* indices = nullptr;
+	};
+
+	struct DXVMESH
+	{
+		uint32_t vertexCount = 0;
+		uint32_t indexCount = 0;
+		ID3D11Buffer* vertexBuffer_p = nullptr;
+		ID3D11Buffer* indexBuffer_p = nullptr;
+	};
+
+	struct DXVMATERIALDATA
+	{
+
+	};
+
+	struct DXVMATERIAL
+	{
+
+	};
+
+	struct DXVOBJECT
+	{
+		DXVMESH* mesh = nullptr;
+		DXVMATERIAL* material = nullptr;
+	};
+
 	// Vertex shader constant buffer data container
-	struct CBUFFER_VS_DATA
+	struct DXVCBUFFER_VS
 	{
 		XMMATRIX world;
 		XMMATRIX view;
@@ -22,7 +62,7 @@ namespace DirectXViewer
 	};
 
 	// Pixel shader constant buffer data container
-	struct CBUFFER_PS_DATA
+	struct DXVCBUFFER_PS
 	{
 		XMFLOAT4 light_pos;
 		XMFLOAT3 light_color;

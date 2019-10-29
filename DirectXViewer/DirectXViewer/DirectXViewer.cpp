@@ -107,10 +107,10 @@ namespace DirectXViewer
 		if (FAILED(hr)) return hr;
 
 		// create D3D constant buffers
-		hr = DxCreateConstantBuffer(sizeof(CBUFFER_VS_DATA), &cbuffer_vs_p);
+		hr = DxCreateConstantBuffer(sizeof(DXVCBUFFER_VS), &cbuffer_vs_p);
 		if (FAILED(hr)) return hr;
 
-		hr = DxCreateConstantBuffer(sizeof(CBUFFER_PS_DATA), &cbuffer_ps_p);
+		hr = DxCreateConstantBuffer(sizeof(DXVCBUFFER_PS), &cbuffer_ps_p);
 		if (FAILED(hr)) return hr;
 
 		// create D3D shaders
