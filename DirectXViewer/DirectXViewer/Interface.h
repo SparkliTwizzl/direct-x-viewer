@@ -3,7 +3,7 @@
 #include "DirectXViewer.h"
 
 
-namespace viewer
+namespace Interface
 {
 	HRESULT Init(HWND* _hWnd_p);
 

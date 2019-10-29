@@ -6,7 +6,7 @@
 
 #include <Windows.h>
 
-#include "viewer.h"
+#include "Interface.h"
 
 #define MAX_LOADSTRING 100
 
@@ -43,7 +43,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-	if (FAILED(viewer::Init(&hWnd)))
+	if (FAILED(Interface::Init(&hWnd)))
 	{
 		return FALSE;
 	}
@@ -64,10 +64,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (msg.message == WM_QUIT)
 			break;
 
-		viewer::Update();
+		Interface::Update();
     }
 
-	viewer::Cleanup();
+	Interface::Cleanup();
 
     return (int) msg.wParam;
 }

@@ -30,7 +30,7 @@
     <ClInclude Include="DirectXViewer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="viewer.h">
+    <ClInclude Include="Interface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,7 +41,7 @@
     <ClCompile Include="DirectXViewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="viewer.cpp">
+    <ClCompile Include="DoStuffHere.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

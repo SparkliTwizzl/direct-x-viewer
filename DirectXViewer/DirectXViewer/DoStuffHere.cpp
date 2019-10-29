@@ -1,7 +1,7 @@
-#include "viewer.h"
+#include "Interface.h"
 
 
-namespace viewer
+namespace Interface
 {
 	HRESULT Init(HWND* _hWnd_p)
 	{

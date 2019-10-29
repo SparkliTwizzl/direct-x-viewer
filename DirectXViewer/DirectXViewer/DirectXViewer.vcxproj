@@ -148,7 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="DirectXViewer.h" />
-    <ClInclude Include="viewer.h" />
+    <ClInclude Include="Interface.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -156,7 +156,7 @@
   <ItemGroup>
     <ClCompile Include="DirectXViewer.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="viewer.cpp" />
+    <ClCompile Include="DoStuffHere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DirectXViewer.rc" />
