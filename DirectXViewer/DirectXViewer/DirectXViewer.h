@@ -38,6 +38,31 @@ namespace DirectXViewer
 	HRESULT Init(HWND* _hWnd_p);
 
 
+	// Returns the world matrix
+	XMMATRIX GetWorldMatrix();
+
+	// Returns the view matrix
+	// NOTES:
+	//  Matrix is stored uninverted for ease of manipulation.
+	XMMATRIX GetViewMatrix();
+
+	// Returns the projection matrix
+	XMMATRIX GetProjectionMatrix();
+
+
+	// Sets the world matrix
+	void SetWorldMatrix(XMMATRIX _m);
+
+	// Sets the view matrix
+	// NOTES:
+	//  Matrix is automatically inverted when passed to constant buffer.
+	//  Make sure matrix passed to this function is uninverted.
+	void SetViewMatrix(XMMATRIX _m);
+
+	// Sets the projection matrix
+	void SetProjectionMatrix(XMMATRIX _m);
+
+
 	// Creates and stores a D3D11 depth stencil and corresponding depth stencil view
 	HRESULT DxCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp);
 

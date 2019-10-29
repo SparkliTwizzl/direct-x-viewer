@@ -36,6 +36,10 @@ namespace DirectXViewer
 
 	D3D11_VIEWPORT				viewport;
 
+	XMFLOAT4X4					world;
+	XMFLOAT4X4					view;
+	XMFLOAT4X4					projection;
+
 
 
 	HRESULT Init(HWND* _hWnd_p)
@@ -119,9 +123,33 @@ namespace DirectXViewer
 		// set viewport values
 		DxSetupViewport(&viewport, (float)windowWidth, (float)windowHeight);
 
+		// set topology type
+		deviceContext_p->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
+		// initialize matrix values
+		SetWorldMatrix(XMMatrixIdentity());
+
+		XMVECTOR eye = { 0.0f, 3.0f, -5.0f, 1.0f };
+		XMVECTOR at = { 0.0f, 3.0f, 5.0f, 1.0f};
+		XMVECTOR up = { 0.0f, 1.0f, 0.0f, 1.0f};
+		SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
+
+		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (FLOAT)windowHeight, 0.01f, 100.0f));
+
 
 		return hr;
 	}
+
+
+	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
+	XMMATRIX GetViewMatrix() { return XMMatrixInverse(nullptr, XMLoadFloat4x4(&view)); }
+	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
+
+
+	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
+	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, XMMatrixInverse(nullptr, _m)); }
+	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
 
 
 	HRESULT DxCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp)
