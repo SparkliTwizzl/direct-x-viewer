@@ -28,6 +28,9 @@ namespace DirectXViewer
 
 	ID3D11SamplerState*			samplerLinear_p = nullptr;
 
+	ID3D11Buffer*				cbuffer_vs_p = nullptr;
+	ID3D11Buffer*				cbuffer_ps_p = nullptr;
+
 
 
 	HRESULT Init(HWND* _hWnd_p)
@@ -94,6 +97,13 @@ namespace DirectXViewer
 		hr = DxCreateSamplerState(&samplerLinear_p, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
 		if (FAILED(hr)) return hr;
 
+		// create D3D constant buffers
+		hr = DxCreateConstantBuffer(sizeof(CBUFFER_VS_DATA), &cbuffer_vs_p);
+		if (FAILED(hr)) return hr;
+
+		hr = DxCreateConstantBuffer(sizeof(CBUFFER_PS_DATA), &cbuffer_ps_p);
+		if (FAILED(hr)) return hr;
+
 
 		return hr;
 	}
@@ -139,6 +149,16 @@ namespace DirectXViewer
 		desc.MinLOD = _minLod;
 		desc.MaxLOD = _maxLod;
 		return device_p->CreateSamplerState(&desc, &samplerLinear_p);
+	}
+
+	HRESULT DxCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp)
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = _bytewidth;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		desc.CPUAccessFlags = 0;
+		return device_p->CreateBuffer(&desc, nullptr, _cbuffer_pp);
 	}
 
 }
