@@ -15,11 +15,17 @@ namespace Interface
 
 	void Update()
 	{
+		DirectXViewer::Update();
 
+
+
+		DirectXViewer::Draw();
 	}
 
 	void Cleanup()
 	{
+		
 
+		DirectXViewer::Cleanup();
 	}
 }

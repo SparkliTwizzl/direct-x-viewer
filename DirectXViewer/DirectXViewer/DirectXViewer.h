@@ -37,6 +37,18 @@ namespace DirectXViewer
 	// Additional resources must be created manually after this function is called
 	HRESULT Init(HWND* _hWnd_p);
 
+	// Handles updates for automatically created D3D and DXV resources
+	// Additional updates must be done manually after this function is called
+	void Update();
+
+	// Handles drawing of active DXV resources
+	// Additional draws must be done manually after this function is called
+	void Draw();
+
+	// Frees memory used by automatically created D3D and DXV resources
+	// Additional heap memory must be cleared manually before this function is called
+	void Cleanup();
+
 
 	// Returns the world matrix
 	XMMATRIX GetWorldMatrix();

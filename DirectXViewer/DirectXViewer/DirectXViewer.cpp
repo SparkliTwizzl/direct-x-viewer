@@ -140,6 +140,18 @@ namespace DirectXViewer
 
 		return hr;
 	}
+	void Update()
+	{
+
+	}
+	void Draw()
+	{
+
+	}
+	void Cleanup()
+	{
+
+	}
 
 
 	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
