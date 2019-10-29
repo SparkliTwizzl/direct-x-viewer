@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "DirectXViewer.h"
 
 #include "vertexshader_default.csh"
@@ -39,6 +41,8 @@ namespace DirectXViewer
 	XMFLOAT4X4					world;
 	XMFLOAT4X4					view;
 	XMFLOAT4X4					projection;
+
+	std::vector<DXVOBJECT*>		sceneObjects;
 
 
 
@@ -142,11 +146,30 @@ namespace DirectXViewer
 	}
 	void Update()
 	{
-
 	}
 	void Draw()
 	{
+		uint32_t strides[] = { sizeof(DXVVERTEX) };
+		uint32_t offsets[] = { 0 };
 
+		DXVCBUFFER_VS cbuffer_vs = {};
+		DXVCBUFFER_PS cbuffer_ps = {};
+
+		cbuffer_vs.world = XMLoadFloat4x4(&world);
+		cbuffer_vs.view = XMLoadFloat4x4(&view);
+		cbuffer_vs.projection = XMLoadFloat4x4(&projection);
+
+		float clearcolor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+		deviceContext_p->RSSetViewports(1, &viewport);
+		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
+		deviceContext_p->VSSetConstantBuffers(0, 1, &cbuffer_vs_p);
+		deviceContext_p->VSSetConstantBuffers(1, 1, &cbuffer_ps_p);
+		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearcolor);
+
+		deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0);
+
+		swapChain_p->Present(1, 0);
 	}
 	void Cleanup()
 	{
