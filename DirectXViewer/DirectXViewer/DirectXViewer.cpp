@@ -26,6 +26,8 @@ namespace DirectXViewer
 
 	ID3D11InputLayout*			vertexLayout_p = nullptr;
 
+	ID3D11SamplerState*			samplerLinear_p = nullptr;
+
 
 
 	HRESULT Init(HWND* _hWnd_p)
@@ -88,6 +90,10 @@ namespace DirectXViewer
 
 		deviceContext_p->IASetInputLayout(vertexLayout_p);
 
+		// create linear sampler
+		hr = DxCreateSamplerState(&samplerLinear_p, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+		if (FAILED(hr)) return hr;
+
 
 		return hr;
 	}
@@ -117,6 +123,22 @@ namespace DirectXViewer
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsvDesc.Texture2D.MipSlice = 0;
 		return device_p->CreateDepthStencilView(*_depthStencil_pp, &dsvDesc, _depthStencilView_pp);
+	}
+
+	HRESULT DxCreateSamplerState(
+		ID3D11SamplerState** _samplerState_pp, D3D11_FILTER _filter,
+		D3D11_TEXTURE_ADDRESS_MODE _addressU, D3D11_TEXTURE_ADDRESS_MODE _addressV,
+		D3D11_COMPARISON_FUNC _comp, float _minLod, float _maxLod)
+	{
+		D3D11_SAMPLER_DESC desc = {};
+		desc.Filter = _filter;
+		desc.AddressU = _addressU;
+		desc.AddressV = _addressV;
+		desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		desc.ComparisonFunc = _comp;
+		desc.MinLOD = _minLod;
+		desc.MaxLOD = _maxLod;
+		return device_p->CreateSamplerState(&desc, &samplerLinear_p);
 	}
 
 }
