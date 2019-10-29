@@ -57,4 +57,12 @@ namespace DirectXViewer
 	// Creates and stores a D3D11 constant buffer
 	HRESULT DxCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp);
 
+	// Initializes a D3D11 viewport
+	// DEFAULTS:
+	//  _topLeftX = 0
+	//  _topLeftY = 0
+	//  _minDepth = 0.0f
+	//  _maxDepth = 1.0f
+	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
+
 }

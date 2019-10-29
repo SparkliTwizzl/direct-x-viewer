@@ -34,6 +34,8 @@ namespace DirectXViewer
 	ID3D11VertexShader*			shader_vertex_p;
 	ID3D11PixelShader*			shader_pixel_p;
 
+	D3D11_VIEWPORT				viewport;
+
 
 
 	HRESULT Init(HWND* _hWnd_p)
@@ -114,6 +116,9 @@ namespace DirectXViewer
 		hr = device_p->CreatePixelShader(pixelshader_default, sizeof(pixelshader_default), nullptr, &shader_pixel_p);
 		if (FAILED(hr)) return hr;
 
+		// set viewport values
+		DxSetupViewport(&viewport, (float)windowWidth, (float)windowHeight);
+
 
 		return hr;
 	}
@@ -169,6 +174,16 @@ namespace DirectXViewer
 		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		desc.CPUAccessFlags = 0;
 		return device_p->CreateBuffer(&desc, nullptr, _cbuffer_pp);
+	}
+
+	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX, float _topLeftY, float _minDepth, float _maxDepth)
+	{
+		_viewport_p->Width = _w;
+		_viewport_p->Height = _h;
+		_viewport_p->TopLeftX = _topLeftX;
+		_viewport_p->TopLeftY = _topLeftY;
+		_viewport_p->MinDepth = _minDepth;
+		_viewport_p->MaxDepth = _maxDepth;
 	}
 
 }
