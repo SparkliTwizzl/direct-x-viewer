@@ -153,12 +153,12 @@ namespace DirectXViewer
 		// initialize matrix values
 		SetWorldMatrix(XMMatrixIdentity());
 
-		XMVECTOR eye = { 0, 5, -5 };
+		XMVECTOR eye = { 0, 0, -5 };
 		XMVECTOR at = { 0, 0, 0 };
 		XMVECTOR up = { 0, 1, 0 };
 		SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
-		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (FLOAT)windowHeight, 0.01f, 100.0f));
+		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (float)windowHeight, 0.01f, 100.0f));
 
 
 		// TEST
