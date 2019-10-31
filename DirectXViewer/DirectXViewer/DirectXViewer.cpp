@@ -1,3 +1,4 @@
+#include <fstream>
 #include <vector>
 
 #include "DirectXViewer.h"
@@ -8,6 +9,8 @@
 
 namespace DirectXViewer
 {
+#pragma region Variables
+
 	// window
 	HWND*						hWnd_p = nullptr;
 
@@ -44,29 +47,36 @@ namespace DirectXViewer
 
 	std::vector<DXVOBJECT*>		sceneObjects;
 
-
+	// DXV
 	const char* errormsg;
 
+#pragma endregion
 
-	// TEST
-	DXVVERTEX testverts[] =
+
+	// Private helper function
+	HRESULT OpenFile(const char* _filepath, std::fstream* _fin)
 	{
-		{ { -1, 0, 0 }, { 0, 0, -1 }, {}, {} },
-		{ { 0, 1, 0 }, { 0, 0, -1 }, {}, {} },
-		{ { 1, 0, 0 }, { 0, 0, -1 }, {}, {} }
-	};
-	uint32_t testinds[] =
-	{
-		0, 1, 2
-	};
+		HRESULT hr = E_INVALIDARG;
 
-	DXVMESHDATA* testmeshdata_p = nullptr;
-	DXVMESH* testmesh_p = nullptr;
-	// TEST
+		*_fin = std::fstream(_filepath, std::ios_base::in | std::ios_base::binary);
 
+		if (_fin->is_open())
+		{
+			hr = S_OK;
+		}
+		else
+		{
+			errormsg = "Could not open file for reading";
+		}
 
+		return hr;
+	}
+
+#pragma region Basic Functions
 	HRESULT Init(HWND* _hWnd_p)
 	{
+		errormsg = "Initialization error";
+
 		HRESULT hr;
 
 		hWnd_p = _hWnd_p;
@@ -161,17 +171,8 @@ namespace DirectXViewer
 		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (float)windowHeight, 0.01f, 100.0f));
 
 
-		// TEST
-		testmeshdata_p = new DXVMESHDATA;
-		testmesh_p = new DXVMESH;
-
-		testmeshdata_p->vertexCount = ARRAYSIZE(testverts);
-		testmeshdata_p->vertices = testverts;
-		testmeshdata_p->indexCount = ARRAYSIZE(testinds);
-		testmeshdata_p->indices = testinds;
-
-		hr = DXVCreateMesh(testmeshdata_p, &testmesh_p);
-		// TEST
+		// Clear error message
+		errormsg = "";
 
 
 		return hr;
@@ -179,7 +180,7 @@ namespace DirectXViewer
 	void Update()
 	{
 	}
-	void Draw()
+	void Draw(bool _present)
 	{
 		float clearcolor[] = BLACK;
 
@@ -188,6 +189,9 @@ namespace DirectXViewer
 
 		DXVCBUFFER_VS cbuffer_vs = {};
 		DXVCBUFFER_PS cbuffer_ps = {};
+
+#define UPDATE_CBUF_VS deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0)
+#define UPDATE_CBUF_PS deviceContext_p->UpdateSubresource(cbuffer_ps_p, 0, nullptr, &cbuffer_ps, 0, 0)
 
 		deviceContext_p->RSSetViewports(1, &viewport);
 		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
@@ -200,8 +204,8 @@ namespace DirectXViewer
 		cbuffer_vs.view = XMLoadFloat4x4(&view);
 		cbuffer_vs.projection = XMLoadFloat4x4(&projection);
 
-		deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0);
-		deviceContext_p->UpdateSubresource(cbuffer_ps_p, 0, nullptr, &cbuffer_ps, 0, 0);
+		UPDATE_CBUF_VS;
+		UPDATE_CBUF_PS;
 
 		deviceContext_p->VSSetShader(shader_vertex_p, 0, 0);
 		deviceContext_p->PSSetShader(shader_pixel_p, 0, 0);
@@ -209,25 +213,13 @@ namespace DirectXViewer
 		deviceContext_p->PSSetSamplers(0, 1, &samplerLinear_p);
 
 
-		// TEST
-		deviceContext_p->IASetVertexBuffers(0, 1, &testmesh_p->vertexBuffer_p, strides, offsets);
-		deviceContext_p->IASetIndexBuffer(testmesh_p->indexBuffer_p, DXGI_FORMAT_R32_UINT, 0);
-		deviceContext_p->DrawIndexed(testmesh_p->indexCount, 0, 0);
-		// TEST
-
-
-		swapChain_p->Present(1, 0);
+		if (_present)
+			Present();
 	}
+	void Present(UINT _syncInterval, UINT _flags) { swapChain_p->Present(_syncInterval, _flags); }
 	void Cleanup()
 	{
 #define RELEASE(p) if (p) p->Release()
-
-
-		// TEST
-		RELEASE(testmesh_p->indexBuffer_p);
-		RELEASE(testmesh_p->vertexBuffer_p);
-		// TEST
-
 
 		RELEASE(shader_pixel_p);
 		RELEASE(shader_vertex_p);
@@ -249,41 +241,74 @@ namespace DirectXViewer
 
 #undef RELEASE(p)
 	}
+#pragma endregion
 
-
-	const char* GetLastError() { return errormsg; }
-
-
+#pragma region Getters/Setters
 	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
 	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
 	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
+	ID3D11Device* GetDevice() { return device_p; }
+	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
+	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
+	const char* GetLastError() { return errormsg; }
 
 	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
 	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
 	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+#pragma endregion
 
+#pragma region Mesh/Material Functions
+	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp)
+	{
+		HRESULT hr;
+		std::fstream fin;
+
+		hr = OpenFile(_filepath, &fin);
+		if (FAILED(hr)) return hr;
+
+		DXVMESHDATA* meshdata_p = new DXVMESHDATA;
+
+		// load data from file
+		fin.read((char*)&meshdata_p->vertexCount, sizeof(meshdata_p->vertexCount));
+		meshdata_p->vertices = new DXVVERTEX[meshdata_p->vertexCount];
+		fin.read((char*)meshdata_p->vertices, meshdata_p->vertexCount * sizeof(DXVVERTEX));
+		fin.read((char*)&meshdata_p->indexCount, sizeof(meshdata_p->indexCount));
+		meshdata_p->indices = new uint32_t[meshdata_p->indexCount];
+		fin.read((char*)meshdata_p->indices, meshdata_p->indexCount * sizeof(uint32_t));
+
+		// store loaded data
+		*_meshdata_pp = meshdata_p;
+
+		return hr;
+	}
 
 	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp)
 	{
-		HRESULT hr;
+		HRESULT hr = E_INVALIDARG;
 
-		DXVMESH* mesh_p = new DXVMESH;
+		if (_meshdata_p == nullptr)
+			errormsg = "Uninitialized DXVMESHDATA* passed to DXVCreateMesh";
+		else
+		{
+			DXVMESH* mesh_p = new DXVMESH;
 
-		mesh_p->vertexCount = _meshdata_p->vertexCount;
-		mesh_p->indexCount = _meshdata_p->indexCount;
+			mesh_p->vertexCount = _meshdata_p->vertexCount;
+			mesh_p->indexCount = _meshdata_p->indexCount;
 
-		hr = DxCreateVertexBuffer(mesh_p->vertexCount, _meshdata_p->vertices, &mesh_p->vertexBuffer_p);
-		if (FAILED(hr)) return hr;
+			hr = DxCreateVertexBuffer(mesh_p->vertexCount, _meshdata_p->vertices, &mesh_p->vertexBuffer_p);
+			if (FAILED(hr)) return hr;
 
-		hr = DxCreateIndexBuffer(mesh_p->indexCount, _meshdata_p->indices, &mesh_p->indexBuffer_p);
-		if (FAILED(hr)) return hr;
+			hr = DxCreateIndexBuffer(mesh_p->indexCount, _meshdata_p->indices, &mesh_p->indexBuffer_p);
+			if (FAILED(hr)) return hr;
 
-		*_mesh_pp = mesh_p;
+			*_mesh_pp = mesh_p;
+		}
 
-		return S_OK;
+		return hr;
 	}
+#pragma endregion
 
-
+#pragma region Scene Functions
 	void AddObjectToScene(DXVOBJECT* _obj_p) { if (_obj_p != nullptr) sceneObjects.push_back(_obj_p); }
 	DXVOBJECT* GetObjectFromScene(uint16_t _i) { return sceneObjects[_i]; }
 	void RemoveObjectFromScene(DXVOBJECT* _obj_p)
@@ -295,8 +320,9 @@ namespace DirectXViewer
 				break;
 			}
 	}
+#pragma endregion
 
-
+#pragma region DirectX Helper Functions
 	HRESULT DxCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp)
 	{
 		HRESULT hr;
@@ -377,5 +403,6 @@ namespace DirectXViewer
 		_viewport_p->MinDepth = _minDepth;
 		_viewport_p->MaxDepth = _maxDepth;
 	}
+#pragma endregion
 
 }

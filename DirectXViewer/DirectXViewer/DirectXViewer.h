@@ -15,6 +15,12 @@ using namespace DirectX;
 
 namespace DirectXViewer
 {
+#pragma region Defines
+#define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
+#pragma endregion
+
+
+#pragma region Structs
 	// DXV vertex data container
 	struct DXVVERTEX
 	{
@@ -31,6 +37,12 @@ namespace DirectXViewer
 		uint32_t indexCount = 0;
 		DXVVERTEX* vertices = nullptr;
 		uint32_t* indices = nullptr;
+
+		~DXVMESHDATA()
+		{
+			delete[] vertices;
+			delete[] indices;
+		}
 	};
 
 	// DXV rendering mesh
@@ -42,6 +54,12 @@ namespace DirectXViewer
 		uint32_t indexCount = 0;
 		ID3D11Buffer* vertexBuffer_p = nullptr;
 		ID3D11Buffer* indexBuffer_p = nullptr;
+
+		~DXVMESH()
+		{
+			if (indexBuffer_p) indexBuffer_p->Release();
+			if (vertexBuffer_p) vertexBuffer_p->Release();
+		}
 	};
 
 	// DXV material data container
@@ -82,9 +100,10 @@ namespace DirectXViewer
 		float surface_shininess;
 		XMFLOAT3 pad;
 	};
+#pragma endregion
 
 
-
+#pragma region Basic Functions
 	// Creates and initializes automatically created D3D and DXV resources
 	// Additional resources must be created manually after this function is called
 	HRESULT Init(HWND* _hWnd_p);
@@ -95,17 +114,20 @@ namespace DirectXViewer
 
 	// Handles drawing of active DXV resources
 	// Additional draws must be done manually after this function is called
-	void Draw();
+	// NOTES:
+	//  Pass false if you are manually drawing anything, then call Present() after manual draws
+	void Draw(bool _present = true);
+
+	// Presents the scene to the window
+	// Only needed if you are drawing anything manually
+	void Present(UINT _syncInterval = 1, UINT _flags = 0);
 
 	// Frees memory used by automatically created D3D and DXV resources
 	// Additional heap memory must be cleared manually before this function is called
 	void Cleanup();
+#pragma endregion
 
-
-	// Returns the last error message generated
-	const char* GetLastError();
-
-
+#pragma region Getters/Setters
 	// Returns the world matrix
 	XMMATRIX GetWorldMatrix();
 
@@ -114,6 +136,18 @@ namespace DirectXViewer
 
 	// Returns the projection matrix
 	XMMATRIX GetProjectionMatrix();
+
+	// Returns a pointer to the device
+	ID3D11Device* GetDevice();
+
+	// Returns a pointer to the device context
+	ID3D11DeviceContext* GetDeviceContext();
+
+	// Returns a pointer to the swap chain
+	IDXGISwapChain* GetSwapChain();
+
+	// Returns the last error message generated
+	const char* GetLastError();
 
 
 	// Sets the world matrix
@@ -124,12 +158,17 @@ namespace DirectXViewer
 
 	// Sets the projection matrix
 	void SetProjectionMatrix(XMMATRIX _m);
+#pragma endregion
 
+#pragma region Mesh/Material Functions
+	// Loads mesh data from file into a DXVMESHDATA
+	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp);
 
 	// Creates and stores a DXVMESH from a DXVMESHDATA
 	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
+#pragma endregion
 
-
+#pragma region Scene Functions
 	// Adds an object to the scene
 	void AddObjectToScene(DXVOBJECT* _obj_p);
 
@@ -138,8 +177,9 @@ namespace DirectXViewer
 
 	// Checks the scene for the object specified and removes it if found
 	void RemoveObjectFromScene(DXVOBJECT* _obj_p);
+#pragma endregion
 
-
+#pragma region DirectX Helper Functions
 	// Creates and stores a D3D11 depth stencil and corresponding depth stencil view
 	HRESULT DxCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp);
 
@@ -172,5 +212,6 @@ namespace DirectXViewer
 	//  _minDepth = 0.0f
 	//  _maxDepth = 1.0f
 	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
+#pragma endregion
 
 }
