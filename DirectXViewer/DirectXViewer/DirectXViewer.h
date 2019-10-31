@@ -110,7 +110,7 @@ namespace DirectXViewer
 
 	// Handles updates for automatically created D3D and DXV resources
 	// Additional updates must be done manually after this function is called
-	void Update();
+	void Update(const MSG* _msg);
 
 	// Handles drawing of active DXV resources
 	// Additional draws must be done manually after this function is called

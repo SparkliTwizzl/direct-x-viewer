@@ -64,7 +64,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (msg.message == WM_QUIT)
 			break;
 
-		Interface::Update();
+		Interface::Update(&msg);
 	}
 
 	Interface::Cleanup();

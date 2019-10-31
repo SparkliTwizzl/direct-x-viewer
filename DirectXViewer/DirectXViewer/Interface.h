@@ -9,7 +9,7 @@ namespace Interface
 	HRESULT Init(HWND* _hWnd_p);
 
 	// Updates DXV and project-specific resources and draws the scene
-	void Update();
+	void Update(const MSG* _msg);
 
 	// Clears any used heap memory
 	void Cleanup();

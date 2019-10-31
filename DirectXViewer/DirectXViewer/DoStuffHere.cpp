@@ -26,7 +26,7 @@ namespace Interface
 		swapChain_p = DirectXViewer::GetSwapChain();
 
 		// TODO: Add init code here
-		XMVECTOR eye = { 0, 3, -10 };
+		XMVECTOR eye = { 0, 3, 10 };
 		XMVECTOR at = { 0, 3, 0 };
 		XMVECTOR up = { 0, 1, 0 };
 		DirectXViewer::SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
@@ -40,9 +40,9 @@ namespace Interface
 
 		return hr;
 	}
-	void Update()
+	void Update(const MSG* _msg)
 	{
-		DirectXViewer::Update();
+		DirectXViewer::Update(_msg);
 
 		// TODO: Add update code here
 

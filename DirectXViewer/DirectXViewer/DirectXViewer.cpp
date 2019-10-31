@@ -1,3 +1,4 @@
+#include <bitset>
 #include <fstream>
 #include <vector>
 
@@ -50,10 +51,32 @@ namespace DirectXViewer
 	// DXV
 	const char* errormsg;
 
+	// input
+	enum Inputs
+	{
+		CamTranslateXMinus = 0
+		, CamTranslateXPlus
+		, CamTranslateYMinus
+		, CamTranslateYPlus
+		, CamTranslateZMinus
+		, CamTranslateZPlus
+		, CamRotate
+		, Count
+	};
+
+	std::bitset<Inputs::Count> inputs;
+	int32_t xMouse;
+	int32_t yMouse;
+	int32_t xMouse_prev;
+	int32_t yMouse_prev;
+
+	const float camTranslationSpeed = 4.0f;
+	const float camRotationSpeed = 0.1f;
+
 #pragma endregion
 
 
-	// Private helper function
+#pragma region Private Helper Functions
 	HRESULT OpenFile(const char* _filepath, std::fstream* _fin)
 	{
 		HRESULT hr = E_INVALIDARG;
@@ -71,6 +94,117 @@ namespace DirectXViewer
 
 		return hr;
 	}
+	void ReadInputs(const MSG* _msg)
+	{
+		// camera translation
+		if (_msg->message == WM_KEYDOWN || _msg->message == WM_KEYUP)
+		{
+			bool inputValue = _msg->message == WM_KEYDOWN;
+
+			switch (_msg->wParam)
+			{
+			case 'A':
+				inputs.set(Inputs::CamTranslateXMinus, inputValue);
+				break;
+			case 'D':
+				inputs.set(Inputs::CamTranslateXPlus, inputValue);
+				break;
+			case VK_SHIFT:
+				inputs.set(Inputs::CamTranslateYMinus, inputValue);
+				break;
+			case VK_SPACE:
+				inputs.set(Inputs::CamTranslateYPlus, inputValue);
+				break;
+			case 'S':
+				inputs.set(Inputs::CamTranslateZMinus, inputValue);
+				break;
+			case 'W':
+				inputs.set(Inputs::CamTranslateZPlus, inputValue);
+				break;
+			default:
+				break;
+			}
+		}
+
+		// camera rotation
+		if (_msg->message == WM_RBUTTONDOWN)
+		{
+			inputs.set(Inputs::CamRotate, true);
+		}
+		if (_msg->message == WM_RBUTTONUP)
+		{
+			inputs.set(Inputs::CamRotate, false);
+		}
+		if (_msg->message == WM_MOUSEMOVE)
+		{
+			xMouse_prev = xMouse;
+			yMouse_prev = yMouse;
+			xMouse = LOWORD(_msg->lParam);
+			yMouse = HIWORD(_msg->lParam);
+		}
+	}
+	void UpdateCamera(float _dt)
+	{
+		XMMATRIX mView = XMMatrixInverse(nullptr, XMLoadFloat4x4(&view));
+
+		float t_camTranslationSpeed = camTranslationSpeed * _dt
+			, t_camRotationSpeed = camRotationSpeed * _dt
+			;
+
+		float dX = 0.0f
+			, dY = 0.0f
+			, dZ = 0.0f
+			, drX = 0.0f
+			, drY = 0.0f
+			;
+
+
+		// get translation amounts
+
+		// X
+		if (inputs.test(Inputs::CamTranslateXMinus))
+			dX -= t_camTranslationSpeed;
+		if (inputs.test(Inputs::CamTranslateXPlus))
+			dX += t_camTranslationSpeed;
+
+		// Y
+		if (inputs.test(Inputs::CamTranslateYMinus))
+			dY -= t_camTranslationSpeed;
+		if (inputs.test(Inputs::CamTranslateYPlus))
+			dY += t_camTranslationSpeed;
+
+		// Z
+		if (inputs.test(Inputs::CamTranslateZMinus))
+			dZ -= t_camTranslationSpeed;
+		if (inputs.test(Inputs::CamTranslateZPlus))
+			dZ += t_camTranslationSpeed;
+
+
+		// apply translation
+		mView = XMMatrixTranslation(dX, 0, 0) * mView;
+		mView = mView * XMMatrixTranslation(0, dY, 0);
+		mView = mView * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
+
+
+		if (inputs.test(Inputs::CamRotate))
+		{
+			// get rotation amounts
+			float camRotY = (float)(xMouse - xMouse_prev) * t_camRotationSpeed
+				, camRotX = (float)(yMouse - yMouse_prev) * t_camRotationSpeed;
+
+			// get view matrix offset from origin
+			XMVECTOR offset = { XMVectorGetX(mView.r[3]), XMVectorGetY(mView.r[3]), XMVectorGetZ(mView.r[3]) };
+
+			// temporarily shift view matrix to origin and apply rotations
+			mView = mView * XMMatrixTranslationFromVector(-offset);
+			mView = (XMMatrixRotationX(camRotX) * mView) * XMMatrixRotationY(camRotY);
+			mView = mView * XMMatrixTranslationFromVector(offset);
+		}
+
+
+		XMStoreFloat4x4(&view, XMMatrixInverse(nullptr, mView));
+	}
+#pragma endregion
 
 #pragma region Basic Functions
 	HRESULT Init(HWND* _hWnd_p)
@@ -177,8 +311,22 @@ namespace DirectXViewer
 
 		return hr;
 	}
-	void Update()
+	void Update(const MSG* _msg)
 	{
+		// get clock ticks since previous call
+		static uint64_t startTime = 0;
+		static uint64_t prevTime = 0;
+		uint64_t curTime = GetTickCount64();
+		if (startTime == 0)
+			startTime = prevTime = curTime;
+		float t = (curTime - startTime) / 1000.0f;
+		float dt = (curTime - prevTime) / 1000.0f;
+		prevTime = curTime;
+
+
+		// read input and update camera
+		ReadInputs(_msg);
+		UpdateCamera(dt);
 	}
 	void Draw(bool _present)
 	{
