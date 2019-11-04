@@ -55,12 +55,12 @@ namespace DirectXViewer
 	const char* errormsg;
 
 	// input
-#define IN_X_NEG 'A'
-#define IN_X_POS 'D'
-#define IN_Y_NEG VK_SHIFT
-#define IN_Y_POS VK_SPACE
-#define IN_Z_NEG 'S'
-#define IN_Z_POS 'W'
+#define INPUT_X_NEG 'A'
+#define INPUT_X_POS 'D'
+#define INPUT_Y_NEG VK_SHIFT
+#define INPUT_Y_POS VK_SPACE
+#define INPUT_Z_NEG 'S'
+#define INPUT_Z_POS 'W'
 
 	enum Inputs
 	{
@@ -114,22 +114,22 @@ namespace DirectXViewer
 
 			switch (_msg->wParam)
 			{
-			case IN_X_NEG:
+			case INPUT_X_NEG:
 				inputValues.set(Inputs::CamTranslateXNeg, value);
 				break;
-			case IN_X_POS:
+			case INPUT_X_POS:
 				inputValues.set(Inputs::CamTranslateXPos, value);
 				break;
-			case IN_Y_NEG:
+			case INPUT_Y_NEG:
 				inputValues.set(Inputs::CamTranslateYNeg, value);
 				break;
-			case IN_Y_POS:
+			case INPUT_Y_POS:
 				inputValues.set(Inputs::CamTranslateYPos, value);
 				break;
-			case IN_Z_NEG:
+			case INPUT_Z_NEG:
 				inputValues.set(Inputs::CamTranslateZNeg, value);
 				break;
-			case IN_Z_POS:
+			case INPUT_Z_POS:
 				inputValues.set(Inputs::CamTranslateZPos, value);
 				break;
 			default:
@@ -382,7 +382,7 @@ namespace DirectXViewer
 #pragma region Draw Functions
 	void Draw(bool _present)
 	{
-		float clearcolor[] = BLACK;		
+		float clearcolor[] = BLACK;
 
 		DXVCBUFFER_VS cbuffer_vs = {};
 		DXVCBUFFER_PS cbuffer_ps = {};
@@ -444,7 +444,6 @@ namespace DirectXViewer
 
 		return hr;
 	}
-
 	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp)
 	{
 		HRESULT hr = E_INVALIDARG;
@@ -469,6 +468,8 @@ namespace DirectXViewer
 
 		return hr;
 	}
+
+
 #pragma endregion
 
 #pragma region Scene Functions

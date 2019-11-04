@@ -7,6 +7,8 @@
 #pragma comment(lib, "d3d11.lib")
 #include <DirectXMath.h>
 
+#include"WICTextureLoader.h"
+
 #include "colors.h"
 
 
@@ -15,6 +17,8 @@ using namespace DirectX;
 
 namespace DirectXViewer
 {
+	using filepath_t = std::array<char, 260>;
+
 #pragma region Defines
 #define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
 #pragma endregion
@@ -65,7 +69,24 @@ namespace DirectXViewer
 	// DXV material data container
 	struct DXVMATERIALDATA
 	{
+		struct COMPONENT
+		{
+			XMFLOAT3 item = { 0.0f, 0.0f, 0.0f };
+			float factor = 0.0f;
+			int16_t input = -1;
+		};
 
+		enum ComponentType
+		{
+			Diffuse = 0
+			, Emissive
+			, Specular
+			, Normalmap
+			, Count
+		};
+
+		COMPONENT components[ComponentType::Count];
+		filepath_t* paths[ComponentType::Count];
 	};
 
 	// DXV rendering material
@@ -73,7 +94,10 @@ namespace DirectXViewer
 	//  Must be contained in a DXVOBJECT along with a DXVMESH
 	struct DXVMATERIAL
 	{
-
+		ID3D11ShaderResourceView* diffuse_p;
+		ID3D11ShaderResourceView* emissive_p;
+		ID3D11ShaderResourceView* specular_p;
+		ID3D11ShaderResourceView* normalmap_p;
 	};
 
 	// DXV rendering object
@@ -180,6 +204,9 @@ namespace DirectXViewer
 
 	// Creates and stores a DXVMESH from a DXVMESHDATA
 	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
+
+
+
 #pragma endregion
 
 #pragma region Scene Functions
