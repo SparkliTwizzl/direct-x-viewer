@@ -54,9 +54,9 @@ namespace Interface
 		uint32_t offsets[] = { 0 };
 
 		// TODO: Add draw code here
-		deviceContext_p->IASetVertexBuffers(0, 1, &testmesh_p->vertexBuffer_p, strides, offsets);
-		deviceContext_p->IASetIndexBuffer(testmesh_p->indexBuffer_p, IBUFFER_FORMAT, 0);
-		deviceContext_p->DrawIndexed(testmesh_p->indexCount, 0, 0);
+		DirectXViewer::DxSetVertexBuffer(&testmesh_p->vertexBuffer_p);
+		DirectXViewer::DxSetIndexBuffer(testmesh_p->indexBuffer_p);
+		DirectXViewer::DxDrawIndexed(testmesh_p->indexCount);
 
 		DirectXViewer::Present();
 	}

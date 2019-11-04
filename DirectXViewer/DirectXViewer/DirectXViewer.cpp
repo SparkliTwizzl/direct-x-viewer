@@ -42,6 +42,9 @@ namespace DirectXViewer
 
 	D3D11_VIEWPORT				viewport;
 
+	uint32_t strides[] = { sizeof(DXVVERTEX) };
+	uint32_t offsets[] = { 0 };
+
 	XMFLOAT4X4					world;
 	XMFLOAT4X4					view;
 	XMFLOAT4X4					projection;
@@ -52,19 +55,27 @@ namespace DirectXViewer
 	const char* errormsg;
 
 	// input
+#define IN_X_NEG 'A'
+#define IN_X_POS 'D'
+#define IN_Y_NEG VK_SHIFT
+#define IN_Y_POS VK_SPACE
+#define IN_Z_NEG 'S'
+#define IN_Z_POS 'W'
+
 	enum Inputs
 	{
-		CamTranslateXMinus = 0
-		, CamTranslateXPlus
-		, CamTranslateYMinus
-		, CamTranslateYPlus
-		, CamTranslateZMinus
-		, CamTranslateZPlus
+		CamTranslateXNeg = 0
+		, CamTranslateXPos
+		, CamTranslateYNeg
+		, CamTranslateYPos
+		, CamTranslateZNeg
+		, CamTranslateZPos
 		, CamRotate
 		, Count
 	};
 
-	std::bitset<Inputs::Count> inputs;
+	std::bitset<Inputs::Count> inputValues;
+
 	int32_t xMouse;
 	int32_t yMouse;
 	int32_t xMouse_prev;
@@ -99,27 +110,27 @@ namespace DirectXViewer
 		// camera translation
 		if (_msg->message == WM_KEYDOWN || _msg->message == WM_KEYUP)
 		{
-			bool inputValue = _msg->message == WM_KEYDOWN;
+			bool value = _msg->message == WM_KEYDOWN;
 
 			switch (_msg->wParam)
 			{
-			case 'A':
-				inputs.set(Inputs::CamTranslateXMinus, inputValue);
+			case IN_X_NEG:
+				inputValues.set(Inputs::CamTranslateXNeg, value);
 				break;
-			case 'D':
-				inputs.set(Inputs::CamTranslateXPlus, inputValue);
+			case IN_X_POS:
+				inputValues.set(Inputs::CamTranslateXPos, value);
 				break;
-			case VK_SHIFT:
-				inputs.set(Inputs::CamTranslateYMinus, inputValue);
+			case IN_Y_NEG:
+				inputValues.set(Inputs::CamTranslateYNeg, value);
 				break;
-			case VK_SPACE:
-				inputs.set(Inputs::CamTranslateYPlus, inputValue);
+			case IN_Y_POS:
+				inputValues.set(Inputs::CamTranslateYPos, value);
 				break;
-			case 'S':
-				inputs.set(Inputs::CamTranslateZMinus, inputValue);
+			case IN_Z_NEG:
+				inputValues.set(Inputs::CamTranslateZNeg, value);
 				break;
-			case 'W':
-				inputs.set(Inputs::CamTranslateZPlus, inputValue);
+			case IN_Z_POS:
+				inputValues.set(Inputs::CamTranslateZPos, value);
 				break;
 			default:
 				break;
@@ -129,11 +140,11 @@ namespace DirectXViewer
 		// camera rotation
 		if (_msg->message == WM_RBUTTONDOWN)
 		{
-			inputs.set(Inputs::CamRotate, true);
+			inputValues.set(Inputs::CamRotate, true);
 		}
 		if (_msg->message == WM_RBUTTONUP)
 		{
-			inputs.set(Inputs::CamRotate, false);
+			inputValues.set(Inputs::CamRotate, false);
 		}
 		if (_msg->message == WM_MOUSEMOVE)
 		{
@@ -162,21 +173,21 @@ namespace DirectXViewer
 		// get translation amounts
 
 		// X
-		if (inputs.test(Inputs::CamTranslateXMinus))
+		if (inputValues.test(Inputs::CamTranslateXNeg))
 			dX -= t_camTranslationSpeed;
-		if (inputs.test(Inputs::CamTranslateXPlus))
+		if (inputValues.test(Inputs::CamTranslateXPos))
 			dX += t_camTranslationSpeed;
 
 		// Y
-		if (inputs.test(Inputs::CamTranslateYMinus))
+		if (inputValues.test(Inputs::CamTranslateYNeg))
 			dY -= t_camTranslationSpeed;
-		if (inputs.test(Inputs::CamTranslateYPlus))
+		if (inputValues.test(Inputs::CamTranslateYPos))
 			dY += t_camTranslationSpeed;
 
 		// Z
-		if (inputs.test(Inputs::CamTranslateZMinus))
+		if (inputValues.test(Inputs::CamTranslateZNeg))
 			dZ -= t_camTranslationSpeed;
-		if (inputs.test(Inputs::CamTranslateZPlus))
+		if (inputValues.test(Inputs::CamTranslateZPos))
 			dZ += t_camTranslationSpeed;
 
 
@@ -186,7 +197,7 @@ namespace DirectXViewer
 		mView = mView * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
 
 
-		if (inputs.test(Inputs::CamRotate))
+		if (inputValues.test(Inputs::CamRotate))
 		{
 			// get rotation amounts
 			float camRotY = (float)(xMouse - xMouse_prev) * t_camRotationSpeed
@@ -288,7 +299,7 @@ namespace DirectXViewer
 		if (FAILED(hr)) return hr;
 
 		// set viewport values
-		DxSetupViewport(&viewport, (float)windowWidth, (float)windowHeight);
+		DxConfigureViewport(&viewport, (float)windowWidth, (float)windowHeight);
 
 		// set topology type
 		deviceContext_p->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -328,12 +339,50 @@ namespace DirectXViewer
 		ReadInputs(_msg);
 		UpdateCamera(dt);
 	}
+	void Cleanup()
+	{
+#define RELEASE(p) if (p) p->Release()
+
+		RELEASE(shader_pixel_p);
+		RELEASE(shader_vertex_p);
+
+		RELEASE(cbuffer_ps_p);
+		RELEASE(cbuffer_vs_p);
+
+		RELEASE(samplerLinear_p);
+
+		RELEASE(vertexLayout_p);
+
+		RELEASE(depthStencilView_p);
+		RELEASE(depthStencil_p);
+		RELEASE(renderTargetView_p);
+
+		RELEASE(swapChain_p);
+		RELEASE(deviceContext_p);
+		RELEASE(device_p);
+
+#undef RELEASE
+	}
+#pragma endregion
+
+#pragma region Getters/Setters
+	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
+	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
+	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
+	ID3D11Device* GetDevice() { return device_p; }
+	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
+	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
+	const char* GetLastError() { return errormsg; }
+
+	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
+	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
+	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+#pragma endregion
+
+#pragma region Draw Functions
 	void Draw(bool _present)
 	{
-		float clearcolor[] = BLACK;
-
-		uint32_t strides[] = { sizeof(DXVVERTEX) };
-		uint32_t offsets[] = { 0 };
+		float clearcolor[] = BLACK;		
 
 		DXVCBUFFER_VS cbuffer_vs = {};
 		DXVCBUFFER_PS cbuffer_ps = {};
@@ -365,44 +414,10 @@ namespace DirectXViewer
 			Present();
 	}
 	void Present(UINT _syncInterval, UINT _flags) { swapChain_p->Present(_syncInterval, _flags); }
-	void Cleanup()
-	{
-#define RELEASE(p) if (p) p->Release()
-
-		RELEASE(shader_pixel_p);
-		RELEASE(shader_vertex_p);
-
-		RELEASE(cbuffer_ps_p);
-		RELEASE(cbuffer_vs_p);
-
-		RELEASE(samplerLinear_p);
-
-		RELEASE(vertexLayout_p);
-
-		RELEASE(depthStencilView_p);
-		RELEASE(depthStencil_p);
-		RELEASE(renderTargetView_p);
-
-		RELEASE(swapChain_p);
-		RELEASE(deviceContext_p);
-		RELEASE(device_p);
-
-#undef RELEASE(p)
-	}
-#pragma endregion
-
-#pragma region Getters/Setters
-	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
-	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
-	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
-	ID3D11Device* GetDevice() { return device_p; }
-	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
-	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
-	const char* GetLastError() { return errormsg; }
-
-	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
-	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
-	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+	void DxSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
+	void DxSetIndexBuffer(ID3D11Buffer* _ibuffer_p) { deviceContext_p->IASetIndexBuffer(_ibuffer_p, IBUFFER_FORMAT, 0); }
+	void DxDraw(uint32_t _numVerts) { deviceContext_p->Draw(_numVerts, 0); }
+	void DxDrawIndexed(uint32_t _numInds) { deviceContext_p->DrawIndexed(_numInds, 0, 0); }
 #pragma endregion
 
 #pragma region Mesh/Material Functions
@@ -542,7 +557,7 @@ namespace DirectXViewer
 		subData.pSysMem = _inds;
 		return device_p->CreateBuffer(&desc, &subData, _ibuffer_pp);
 	}
-	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX, float _topLeftY, float _minDepth, float _maxDepth)
+	void DxConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX, float _topLeftY, float _minDepth, float _maxDepth)
 	{
 		_viewport_p->Width = _w;
 		_viewport_p->Height = _h;

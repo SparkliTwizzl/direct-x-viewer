@@ -112,16 +112,6 @@ namespace DirectXViewer
 	// Additional updates must be done manually after this function is called
 	void Update(const MSG* _msg);
 
-	// Handles drawing of active DXV resources
-	// Additional draws must be done manually after this function is called
-	// NOTES:
-	//  Pass false if you are manually drawing anything, then call Present() after manual draws
-	void Draw(bool _present = true);
-
-	// Presents the scene to the window
-	// Only needed if you are drawing anything manually
-	void Present(UINT _syncInterval = 1, UINT _flags = 0);
-
 	// Frees memory used by automatically created D3D and DXV resources
 	// Additional heap memory must be cleared manually before this function is called
 	void Cleanup();
@@ -158,6 +148,30 @@ namespace DirectXViewer
 
 	// Sets the projection matrix
 	void SetProjectionMatrix(XMMATRIX _m);
+#pragma endregion
+
+#pragma region Draw Functions
+	// Handles drawing of active DXV resources
+	// Additional draws must be done manually after this function is called
+	// NOTES:
+	//  Pass false if you are manually drawing anything, then call Present() after manual draws
+	void Draw(bool _present = true);
+
+	// Presents the scene to the window
+	// Only needed if you are drawing anything manually
+	void Present(UINT _syncInterval = 1, UINT _flags = 0);
+
+	// Sets the current vertex buffer
+	void DxSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
+
+	// Sets the current index buffer
+	void DxSetIndexBuffer(ID3D11Buffer* _ibuffer_p);
+
+	// Draw raw vertices of current vertex buffer
+	void DxDraw(uint32_t _numVerts);
+
+	// Draw indexed vertices of current vertex and index buffer
+	void DxDrawIndexed(uint32_t _numInds);
 #pragma endregion
 
 #pragma region Mesh/Material Functions
@@ -211,7 +225,7 @@ namespace DirectXViewer
 	//  _topLeftY = 0
 	//  _minDepth = 0.0f
 	//  _maxDepth = 1.0f
-	void DxSetupViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
+	void DxConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
 #pragma endregion
 
 }
