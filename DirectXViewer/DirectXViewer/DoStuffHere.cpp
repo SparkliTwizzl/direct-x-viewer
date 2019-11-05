@@ -46,6 +46,9 @@ namespace Interface
 		hr = DirectXViewer::DXVLoadMaterialData("assets/Idle.mat", &testmatdata_p);
 		if (FAILED(hr)) return hr;
 
+		hr = DirectXViewer::DXVCreateMaterial(&testmatdata_p[0], &testmat_p);
+		if (FAILED(hr)) return hr;
+
 
 		return hr;
 	}

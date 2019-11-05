@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 
+#include"WICTextureLoader.h"
+
 #include "DirectXViewer.h"
 
 #include "vertexshader_default.csh"
@@ -312,7 +314,12 @@ namespace DirectXViewer
 		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (float)windowHeight, 0.01f, 100.0f));
 
 
-		// Clear error message
+		// initialize WIC texture loader
+		hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+		if (FAILED(hr)) return hr;
+
+
+		// clear error message
 		errormsg = "";
 
 
@@ -337,6 +344,7 @@ namespace DirectXViewer
 	}
 	void Cleanup()
 	{
+		// release D3D resources
 #define RELEASE(p) if (p) p->Release()
 
 		RELEASE(shader_pixel_p);
@@ -358,6 +366,10 @@ namespace DirectXViewer
 		RELEASE(device_p);
 
 #undef RELEASE
+
+
+		// uninitialize WIC texture loader
+		CoUninitialize();
 	}
 #pragma endregion
 
@@ -440,7 +452,7 @@ namespace DirectXViewer
 
 		return hr;
 	}
-	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp)
+	HRESULT DXVCreateMesh(const DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp)
 	{
 		HRESULT hr = E_INVALIDARG;
 
@@ -532,9 +544,26 @@ namespace DirectXViewer
 
 		return hr;
 	}
-	HRESULT DXVCreateMaterial(DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp)
+	HRESULT DXVCreateMaterial(const DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp)
 	{
 		HRESULT hr = S_OK;
+
+		DXVMATERIAL* material_p = new DXVMATERIAL;
+
+
+		// FOR EACH COMPONENT :
+
+		/*
+		HRESULT CreateWICTextureFromFile(
+			_In_ ID3D11Device* d3dDevice,								// device_p
+			_In_z_ const wchar_t* szFileName,							// material_p.components[c].path
+			_Outptr_opt_ ID3D11Resource** texture,						// material_p.components[c].texture_p
+			_Outptr_opt_ ID3D11ShaderResourceView** textureView,		// material_p.components[c].textureView_p
+			_In_ size_t maxsize = 0)
+		*/
+
+
+		*_material_pp = material_p;
 
 		return hr;
 	}

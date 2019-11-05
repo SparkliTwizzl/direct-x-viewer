@@ -8,8 +8,6 @@
 #pragma comment(lib, "d3d11.lib")
 #include <DirectXMath.h>
 
-#include"WICTextureLoader.h"
-
 #include "colors.h"
 
 
@@ -97,10 +95,25 @@ namespace DirectXViewer
 	//  Must be contained in a DXVOBJECT along with a DXVMESH to be added to scene
 	struct DXVMATERIAL
 	{
-		ID3D11ShaderResourceView* diffuse_p;
-		ID3D11ShaderResourceView* emissive_p;
-		ID3D11ShaderResourceView* specular_p;
-		ID3D11ShaderResourceView* normalmap_p;
+		struct COMPONENT
+		{
+			ID3D11Resource*	texture_p;
+			ID3D11ShaderResourceView* textureView_p;
+		};
+
+		enum ComponentType_e
+		{
+			Diffuse = 0
+			, Emissive
+			, Specular
+			, NormalMap
+			, Count
+		};
+
+		COMPONENT operator[](int i) { return components[i]; }
+		const COMPONENT operator[](int i) const { return components[i]; }
+
+		COMPONENT components[ComponentType_e::Count];
 	};
 
 	// DXV rendering object
@@ -208,7 +221,7 @@ namespace DirectXViewer
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp);
 
 	// Creates and stores a DXVMESH from a DXVMESHDATA
-	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
+	HRESULT DXVCreateMesh(const DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
 
 
 	// Loads material data from file into a DXVMATERIALDATA
@@ -217,7 +230,7 @@ namespace DirectXViewer
 	HRESULT DXVLoadMaterialData(const char* _filepath, DXVMATERIALDATA** _matdata_pp);
 
 	// Creates and stores a DXVMATERIAL from a DXVMATERIALDATA
-	HRESULT DXVCreateMaterial(DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp);
+	HRESULT DXVCreateMaterial(const DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp);
 #pragma endregion
 
 #pragma region Scene Functions
