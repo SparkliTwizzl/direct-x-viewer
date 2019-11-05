@@ -72,12 +72,12 @@ namespace DirectXViewer
 	{
 		struct COMPONENT
 		{
-			XMFLOAT3 item = { 0.0f, 0.0f, 0.0f };
+			XMFLOAT3 value = { 0.0f, 0.0f, 0.0f };
 			float factor = 0.0f;
-			int16_t input = -1;
+			filepath_t path;
 		};
 
-		enum ComponentType
+		enum ComponentType_e
 		{
 			Diffuse = 0
 			, Emissive
@@ -86,8 +86,10 @@ namespace DirectXViewer
 			, Count
 		};
 
-		COMPONENT components[ComponentType::Count];
-		filepath_t paths[ComponentType::Count];
+		COMPONENT operator[](int i) { return components[i]; }
+		const COMPONENT operator[](int i) const { return components[i]; }
+
+		COMPONENT components[ComponentType_e::Count];
 	};
 
 	// DXV rendering material
@@ -209,7 +211,13 @@ namespace DirectXViewer
 	HRESULT DXVCreateMesh(DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
 
 
+	// Loads material data from file into a DXVMATERIALDATA
+	// NOTES:
+	//  If the .mat file passed in contains multiple materials, this function will return an array of DXVMATERIALDATAs
+	HRESULT DXVLoadMaterialData(const char* _filepath, DXVMATERIALDATA** _matdata_pp);
 
+	// Creates and stores a DXVMATERIAL from a DXVMATERIALDATA
+	HRESULT DXVCreateMaterial(DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp);
 #pragma endregion
 
 #pragma region Scene Functions

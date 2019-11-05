@@ -8,8 +8,12 @@ namespace Interface
 	ID3D11DeviceContext*			deviceContext_p = nullptr;
 	IDXGISwapChain*					swapChain_p = nullptr;
 
+	// TODO: Add variables here
 	DirectXViewer::DXVMESHDATA* testmeshdata_p = nullptr;
 	DirectXViewer::DXVMESH* testmesh_p = nullptr;
+
+	DirectXViewer::DXVMATERIALDATA* testmatdata_p = nullptr;
+	DirectXViewer::DXVMATERIAL* testmat_p = nullptr;
 #pragma endregion
 
 
@@ -31,10 +35,15 @@ namespace Interface
 		XMVECTOR up = { 0, 1, 0 };
 		DirectXViewer::SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
+
 		hr = DirectXViewer::DXVLoadMeshData("assets/Idle.mesh", &testmeshdata_p);
 		if (FAILED(hr)) return hr;
 
 		hr = DirectXViewer::DXVCreateMesh(testmeshdata_p, &testmesh_p);
+		if (FAILED(hr)) return hr;
+
+
+		hr = DirectXViewer::DXVLoadMaterialData("assets/Idle.mat", &testmatdata_p);
 		if (FAILED(hr)) return hr;
 
 
@@ -64,6 +73,7 @@ namespace Interface
 	{
 		// TODO: Add cleanup code here
 		delete testmesh_p;
+		delete testmat_p;
 
 
 		DirectXViewer::Cleanup();

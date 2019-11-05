@@ -62,7 +62,7 @@ namespace DirectXViewer
 #define INPUT_Z_NEG 'S'
 #define INPUT_Z_POS 'W'
 
-	enum Inputs
+	enum Inputs_e
 	{
 		CamTranslateXNeg = 0
 		, CamTranslateXPos
@@ -74,7 +74,7 @@ namespace DirectXViewer
 		, Count
 	};
 
-	std::bitset<Inputs::Count> inputValues;
+	std::bitset<Inputs_e::Count> inputValues;
 
 	int32_t xMouse;
 	int32_t yMouse;
@@ -115,22 +115,22 @@ namespace DirectXViewer
 			switch (_msg->wParam)
 			{
 			case INPUT_X_NEG:
-				inputValues.set(Inputs::CamTranslateXNeg, value);
+				inputValues.set(Inputs_e::CamTranslateXNeg, value);
 				break;
 			case INPUT_X_POS:
-				inputValues.set(Inputs::CamTranslateXPos, value);
+				inputValues.set(Inputs_e::CamTranslateXPos, value);
 				break;
 			case INPUT_Y_NEG:
-				inputValues.set(Inputs::CamTranslateYNeg, value);
+				inputValues.set(Inputs_e::CamTranslateYNeg, value);
 				break;
 			case INPUT_Y_POS:
-				inputValues.set(Inputs::CamTranslateYPos, value);
+				inputValues.set(Inputs_e::CamTranslateYPos, value);
 				break;
 			case INPUT_Z_NEG:
-				inputValues.set(Inputs::CamTranslateZNeg, value);
+				inputValues.set(Inputs_e::CamTranslateZNeg, value);
 				break;
 			case INPUT_Z_POS:
-				inputValues.set(Inputs::CamTranslateZPos, value);
+				inputValues.set(Inputs_e::CamTranslateZPos, value);
 				break;
 			default:
 				break;
@@ -140,11 +140,11 @@ namespace DirectXViewer
 		// camera rotation
 		if (_msg->message == WM_RBUTTONDOWN)
 		{
-			inputValues.set(Inputs::CamRotate, true);
+			inputValues.set(Inputs_e::CamRotate, true);
 		}
 		if (_msg->message == WM_RBUTTONUP)
 		{
-			inputValues.set(Inputs::CamRotate, false);
+			inputValues.set(Inputs_e::CamRotate, false);
 		}
 		if (_msg->message == WM_MOUSEMOVE)
 		{
@@ -171,21 +171,21 @@ namespace DirectXViewer
 		// get translation amounts
 
 		// X
-		if (inputValues.test(Inputs::CamTranslateXNeg))
+		if (inputValues.test(Inputs_e::CamTranslateXNeg))
 			dX -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs::CamTranslateXPos))
+		if (inputValues.test(Inputs_e::CamTranslateXPos))
 			dX += t_camTranslationSpeed;
 
 		// Y
-		if (inputValues.test(Inputs::CamTranslateYNeg))
+		if (inputValues.test(Inputs_e::CamTranslateYNeg))
 			dY -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs::CamTranslateYPos))
+		if (inputValues.test(Inputs_e::CamTranslateYPos))
 			dY += t_camTranslationSpeed;
 
 		// Z
-		if (inputValues.test(Inputs::CamTranslateZNeg))
+		if (inputValues.test(Inputs_e::CamTranslateZNeg))
 			dZ -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs::CamTranslateZPos))
+		if (inputValues.test(Inputs_e::CamTranslateZPos))
 			dZ += t_camTranslationSpeed;
 
 
@@ -193,7 +193,7 @@ namespace DirectXViewer
 		mView = ((XMMatrixTranslation(dX, 0, 0) * mView) * XMMatrixTranslation(0, dY, 0)) * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
 
 
-		if (inputValues.test(Inputs::CamRotate))
+		if (inputValues.test(Inputs_e::CamRotate))
 		{
 			// get rotation amounts
 			float camRotY = (float)(xMouse - xMouse_prev) * t_camRotationSpeed
@@ -465,7 +465,79 @@ namespace DirectXViewer
 		return hr;
 	}
 
+	HRESULT DXVLoadMaterialData(const char* _filepath, DXVMATERIALDATA** _matdata_pp)
+	{
+		HRESULT hr;
+		std::fstream fin;
 
+		hr = OpenFile(_filepath, &fin);
+		if (FAILED(hr)) return hr;
+
+		struct SIMPLEMATERIAL
+		{
+			struct COMPONENT
+			{
+				float value[3] = { 0.0f, 0.0f, 0.0f };
+				float factor = 0.0f;
+				int64_t input = -1;
+			};
+
+			enum ComponentType_e
+			{
+				Diffuse = 0
+				, Emissive
+				, Specular
+				, NormalMap
+				, Count
+			};
+
+			COMPONENT operator[](int i) { return components[i]; }
+			const COMPONENT operator[](int i) const { return components[i]; }
+
+			COMPONENT components[ComponentType_e::Count];
+		};
+
+		uint32_t numMats = 0;
+		uint32_t numPaths = 0;
+		filepath_t* paths_p = nullptr;
+		SIMPLEMATERIAL* inData_p = nullptr;
+		DXVMATERIALDATA* matdata_p = nullptr;
+
+		// load data from file
+		fin.read((char*)&numMats, sizeof(numMats));
+		inData_p = new SIMPLEMATERIAL[numMats];
+		matdata_p = new DXVMATERIALDATA[numMats];
+		fin.read((char*)&inData_p[0], numMats * sizeof(SIMPLEMATERIAL));
+		fin.read((char*)&numPaths, sizeof(numPaths));
+		paths_p = new filepath_t[numPaths];
+		fin.read((char*)&paths_p[0], numPaths * sizeof(filepath_t));
+
+		// convert data to DXVMATERIALDATA format
+		for (uint32_t i = 0; i < numMats; i++)
+		{
+			for (uint32_t c = 0; c < SIMPLEMATERIAL::ComponentType_e::Count; c++)
+			{
+				matdata_p[i].components[c].value.x = inData_p[i][c].value[0];
+				matdata_p[i].components[c].value.y = inData_p[i][c].value[1];
+				matdata_p[i].components[c].value.z = inData_p[i][c].value[2];
+
+				matdata_p[i].components[c].factor = inData_p[i][c].factor;
+
+				matdata_p[i].components[c].path = paths_p[inData_p[i][c].input];
+			}
+		}
+
+		// store loaded data
+		*_matdata_pp = matdata_p;
+
+		return hr;
+	}
+	HRESULT DXVCreateMaterial(DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp)
+	{
+		HRESULT hr = S_OK;
+
+		return hr;
+	}
 #pragma endregion
 
 #pragma region Scene Functions
