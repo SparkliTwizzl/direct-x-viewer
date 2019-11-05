@@ -159,15 +159,13 @@ namespace DirectXViewer
 		XMMATRIX mView = XMMatrixInverse(nullptr, XMLoadFloat4x4(&view));
 
 		float t_camTranslationSpeed = camTranslationSpeed * _dt
-			, t_camRotationSpeed = camRotationSpeed * _dt
-			;
+			, t_camRotationSpeed = camRotationSpeed * _dt;
 
 		float dX = 0.0f
 			, dY = 0.0f
 			, dZ = 0.0f
 			, drX = 0.0f
-			, drY = 0.0f
-			;
+			, drY = 0.0f;
 
 
 		// get translation amounts
@@ -191,10 +189,8 @@ namespace DirectXViewer
 			dZ += t_camTranslationSpeed;
 
 
-		// apply translation
-		mView = XMMatrixTranslation(dX, 0, 0) * mView;
-		mView = mView * XMMatrixTranslation(0, dY, 0);
-		mView = mView * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
+		// apply translations
+		mView = ((XMMatrixTranslation(dX, 0, 0) * mView) * XMMatrixTranslation(0, dY, 0)) * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
 
 
 		if (inputValues.test(Inputs::CamRotate))
