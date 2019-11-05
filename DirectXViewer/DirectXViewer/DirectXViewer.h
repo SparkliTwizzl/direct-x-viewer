@@ -52,7 +52,7 @@ namespace DirectXViewer
 
 	// DXV rendering mesh
 	// NOTES:
-	//  Must be contained in a DXVOBJECT along with a DXVMATERIAL
+	//  Must be contained in a DXVOBJECT along with a DXVMATERIAL to be added to scene
 	struct DXVMESH
 	{
 		uint32_t vertexCount = 0;
@@ -92,7 +92,7 @@ namespace DirectXViewer
 
 	// DXV rendering material
 	// NOTES:
-	//  Must be contained in a DXVOBJECT along with a DXVMESH
+	//  Must be contained in a DXVOBJECT along with a DXVMESH to be added to scene
 	struct DXVMATERIAL
 	{
 		ID3D11ShaderResourceView* diffuse_p;
@@ -102,10 +102,12 @@ namespace DirectXViewer
 	};
 
 	// DXV rendering object
+	// NOTES:
+	//  Must have both mesh and material to be used by scene
 	struct DXVOBJECT
 	{
-		DXVMESH* mesh = nullptr;
-		DXVMATERIAL* material = nullptr;
+		DXVMESH* mesh_p = nullptr;
+		DXVMATERIAL* material_p = nullptr;
 	};
 
 	// Vertex shader constant buffer data container
