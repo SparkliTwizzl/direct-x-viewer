@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <Windows.h>
 
@@ -86,7 +87,7 @@ namespace DirectXViewer
 		};
 
 		COMPONENT components[ComponentType::Count];
-		filepath_t* paths[ComponentType::Count];
+		filepath_t paths[ComponentType::Count];
 	};
 
 	// DXV rendering material
