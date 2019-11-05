@@ -8,6 +8,8 @@
 #pragma comment(lib, "d3d11.lib")
 #include <DirectXMath.h>
 
+#include "debug.h"
+
 #include "colors.h"
 
 
@@ -72,7 +74,7 @@ namespace DirectXViewer
 		{
 			XMFLOAT3 value = { 0.0f, 0.0f, 0.0f };
 			float factor = 0.0f;
-			filepath_t path;
+			char filepath[260];
 		};
 
 		enum ComponentType_e
@@ -97,8 +99,10 @@ namespace DirectXViewer
 	{
 		struct COMPONENT
 		{
-			ID3D11Resource*	texture_p;
-			ID3D11ShaderResourceView* textureView_p;
+			XMFLOAT3 value = { 0.0f, 0.0f, 0.0f };
+			float factor = 0.0f;
+			ID3D11Resource*	texture_p = nullptr;
+			ID3D11ShaderResourceView* textureView_p = nullptr;
 		};
 
 		enum ComponentType_e
@@ -109,6 +113,15 @@ namespace DirectXViewer
 			, NormalMap
 			, Count
 		};
+
+		~DXVMATERIAL()
+		{
+			for (int32_t i = ComponentType_e::Count - 1; i >= 0; i--)
+			{
+				if (components[i].textureView_p) components[i].textureView_p->Release();
+				if (components[i].texture_p) components[i].texture_p->Release();
+			}
+		}
 
 		COMPONENT operator[](int i) { return components[i]; }
 		const COMPONENT operator[](int i) const { return components[i]; }
@@ -142,7 +155,7 @@ namespace DirectXViewer
 		float surface_shininess;
 		XMFLOAT3 pad;
 	};
-#pragma endregion
+#pragma endregion all added
 
 
 #pragma region Basic Functions
@@ -157,7 +170,7 @@ namespace DirectXViewer
 	// Frees memory used by automatically created D3D and DXV resources
 	// Additional heap memory must be cleared manually before this function is called
 	void Cleanup();
-#pragma endregion
+#pragma endregion all added
 
 #pragma region Getters/Setters
 	// Returns the world matrix
@@ -277,6 +290,6 @@ namespace DirectXViewer
 	//  _minDepth = 0.0f
 	//  _maxDepth = 1.0f
 	void DxConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
-#pragma endregion
+#pragma endregion all added
 
 }

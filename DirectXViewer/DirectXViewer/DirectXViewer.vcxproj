@@ -148,10 +148,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="colors.h" />
+    <ClInclude Include="debug.h" />
     <ClInclude Include="DirectXViewer.h" />
-    <ClInclude Include="Interface.h" />
+    <ClInclude Include="DXVInterface.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WICTextureLoader.h" />
   </ItemGroup>

@@ -1,9 +1,11 @@
 #pragma once
 
+#include "debug.h"
+
 #include "DirectXViewer.h"
 
 
-namespace Interface
+namespace DXVInterface
 {
 	// Initializes DXV and project-specific resources
 	HRESULT Init(HWND* _hWnd_p);

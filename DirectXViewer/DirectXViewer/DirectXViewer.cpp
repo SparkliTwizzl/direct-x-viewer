@@ -15,46 +15,47 @@ namespace DirectXViewer
 #pragma region Variables
 
 	// window
-	HWND*						hWnd_p = nullptr;
+	HWND*							hWnd_p = nullptr;
 
-	uint32_t					windowWidth = 0;
-	uint32_t					windowHeight = 0;
+	uint32_t						windowWidth = 0;
+	uint32_t						windowHeight = 0;
 
 	// D3D
-	D3D_DRIVER_TYPE				driverType = D3D_DRIVER_TYPE_NULL;
-	D3D_FEATURE_LEVEL			featureLevel = D3D_FEATURE_LEVEL_11_0;
+	D3D_DRIVER_TYPE					driverType = D3D_DRIVER_TYPE_NULL;
+	D3D_FEATURE_LEVEL				featureLevel = D3D_FEATURE_LEVEL_11_0;
 
-	ID3D11Device*				device_p = nullptr;
-	ID3D11DeviceContext*		deviceContext_p = nullptr;
-	IDXGISwapChain*				swapChain_p = nullptr;
+	ID3D11Device*					device_p = nullptr;
+	ID3D11DeviceContext*			deviceContext_p = nullptr;
+	IDXGISwapChain*					swapChain_p = nullptr;
 
-	ID3D11RenderTargetView*		renderTargetView_p = nullptr;
-	ID3D11Texture2D*			depthStencil_p = nullptr;
-	ID3D11DepthStencilView*		depthStencilView_p = nullptr;
+	ID3D11RenderTargetView*			renderTargetView_p = nullptr;
+	ID3D11Texture2D*				depthStencil_p = nullptr;
+	ID3D11DepthStencilView*			depthStencilView_p = nullptr;
 
-	ID3D11InputLayout*			vertexLayout_p = nullptr;
+	ID3D11InputLayout*				vertexLayout_p = nullptr;
 
-	ID3D11SamplerState*			samplerLinear_p = nullptr;
+	ID3D11SamplerState*				samplerLinear_p = nullptr;
 
-	ID3D11Buffer*				cbuffer_vs_p = nullptr;
-	ID3D11Buffer*				cbuffer_ps_p = nullptr;
+	ID3D11Buffer*					cbuffer_vs_p = nullptr;
+	ID3D11Buffer*					cbuffer_ps_p = nullptr;
 
-	ID3D11VertexShader*			shader_vertex_p = nullptr;
-	ID3D11PixelShader*			shader_pixel_p = nullptr;
+	ID3D11VertexShader*				shader_vertex_p = nullptr;
+	ID3D11PixelShader*				shader_pixel_p = nullptr;
 
-	D3D11_VIEWPORT				viewport;
-
-	uint32_t strides[] = { sizeof(DXVVERTEX) };
-	uint32_t offsets[] = { 0 };
-
-	XMFLOAT4X4					world;
-	XMFLOAT4X4					view;
-	XMFLOAT4X4					projection;
-
-	std::vector<DXVOBJECT*>		sceneObjects;
+	D3D11_VIEWPORT					viewport;
 
 	// DXV
-	const char* errormsg;
+	const char*						errormsg;
+	int								refcount = 0;
+
+	uint32_t						strides[] = { sizeof(DXVVERTEX) };
+	uint32_t						offsets[] = { 0 };
+
+	XMFLOAT4X4						world;
+	XMFLOAT4X4						view;
+	XMFLOAT4X4						projection;
+
+	std::vector<DXVOBJECT*>			sceneObjects; // SOURCE OF MYSTERY MEMORY LEAK
 
 	// input
 #define INPUT_X_NEG 'A'
@@ -76,15 +77,15 @@ namespace DirectXViewer
 		, Count
 	};
 
-	std::bitset<Inputs_e::Count> inputValues;
+	std::bitset<Inputs_e::Count>	inputValues;
 
-	int32_t xMouse;
-	int32_t yMouse;
-	int32_t xMouse_prev;
-	int32_t yMouse_prev;
+	int32_t							xMouse;
+	int32_t							yMouse;
+	int32_t							xMouse_prev;
+	int32_t							yMouse_prev;
 
-	const float camTranslationSpeed = 4.0f;
-	const float camRotationSpeed = 0.1f;
+	const float						camTranslationSpeed = 4.0f;
+	const float						camRotationSpeed = 0.1f;
 
 #pragma endregion
 
@@ -213,7 +214,7 @@ namespace DirectXViewer
 
 		XMStoreFloat4x4(&view, XMMatrixInverse(nullptr, mView));
 	}
-#pragma endregion
+#pragma endregion all added
 
 #pragma region Basic Functions
 	HRESULT Init(HWND* _hWnd_p)
@@ -371,7 +372,7 @@ namespace DirectXViewer
 		// uninitialize WIC texture loader
 		CoUninitialize();
 	}
-#pragma endregion
+#pragma endregion all added
 
 #pragma region Getters/Setters
 	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
@@ -385,7 +386,7 @@ namespace DirectXViewer
 	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
 	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
 	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
-#pragma endregion
+#pragma endregion all added
 
 #pragma region Draw Functions
 	void Draw(bool _present)
@@ -535,7 +536,7 @@ namespace DirectXViewer
 
 				matdata_p[i].components[c].factor = inData_p[i][c].factor;
 
-				matdata_p[i].components[c].path = paths_p[inData_p[i][c].input];
+				memcpy(matdata_p[i].components[c].filepath, (const void*)&paths_p[inData_p[i].components[c].input], 260);
 			}
 		}
 
@@ -546,11 +547,30 @@ namespace DirectXViewer
 	}
 	HRESULT DXVCreateMaterial(const DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp)
 	{
-		HRESULT hr = S_OK;
+		HRESULT hr;
 
 		DXVMATERIAL* material_p = new DXVMATERIAL;
 
+		for (uint32_t c = 0; c < DXVMATERIAL::ComponentType_e::Count; c++)
+		{
+			material_p->components[c].value = _matdata_p->components[c].value;
+			material_p->components[c].factor = _matdata_p->components[c].factor;
 
+			const wchar_t* prefix = L"assets/";
+			wchar_t partialpath[260];
+			MultiByteToWideChar(CP_ACP, 0, _matdata_p->components[c].filepath, -1, (LPWSTR)partialpath, 260);
+
+			wchar_t filepath[267];
+			memcpy(&filepath[0], prefix, 7 * sizeof(wchar_t));
+			memcpy(&filepath[7], partialpath, 260 * sizeof(wchar_t));
+
+			hr = CreateWICTextureFromFile(device_p, filepath, &material_p->components[c].texture_p, &material_p->components[c].textureView_p);
+			if (FAILED(hr))
+			{
+				errormsg = "Failed to create WIC texture from file";
+				return hr;
+			}
+		}
 		// FOR EACH COMPONENT :
 
 		/*
@@ -566,6 +586,7 @@ namespace DirectXViewer
 		*_material_pp = material_p;
 
 		return hr;
+		//return S_OK;
 	}
 #pragma endregion
 
@@ -664,6 +685,6 @@ namespace DirectXViewer
 		_viewport_p->MinDepth = _minDepth;
 		_viewport_p->MaxDepth = _maxDepth;
 	}
-#pragma endregion
+#pragma endregion all added
 
 }
