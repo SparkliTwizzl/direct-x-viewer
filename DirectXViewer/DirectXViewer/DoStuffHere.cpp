@@ -4,16 +4,16 @@
 namespace DXVInterface
 {
 #pragma region Variables
-	ID3D11Device*					device_p = nullptr;
-	ID3D11DeviceContext*			deviceContext_p = nullptr;
-	IDXGISwapChain*					swapChain_p = nullptr;
+	ID3D11Device*						device_p = nullptr;
+	ID3D11DeviceContext*				deviceContext_p = nullptr;
+	IDXGISwapChain*						swapChain_p = nullptr;
 
 	// TODO: Add variables here
-	//DirectXViewer::DXVMESHDATA* testmeshdata_p = nullptr;
-	//DirectXViewer::DXVMESH* testmesh_p = nullptr;
+	DirectXViewer::DXVMESHDATA*			testmeshdata_p = nullptr;
+	DirectXViewer::DXVMESH*				testmesh_p = nullptr;
 
-	//DirectXViewer::DXVMATERIALDATA* testmatdata_p = nullptr;
-	//DirectXViewer::DXVMATERIAL* testmat_p = nullptr;
+	DirectXViewer::DXVMATERIALDATA*		testmatdata_p = nullptr;
+	DirectXViewer::DXVMATERIAL*			testmat_p = nullptr;
 #pragma endregion
 
 
@@ -36,17 +36,17 @@ namespace DXVInterface
 		DirectXViewer::SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
 
-		//hr = DirectXViewer::DXVLoadMeshData("assets/Idle.mesh", &testmeshdata_p);
+		hr = DirectXViewer::DXVLoadMeshData("assets/Idle.mesh", &testmeshdata_p);
 		if (FAILED(hr)) return hr;
 
-		//hr = DirectXViewer::DXVCreateMesh(testmeshdata_p, &testmesh_p);
+		hr = DirectXViewer::DXVCreateMesh(testmeshdata_p, &testmesh_p);
 		if (FAILED(hr)) return hr;
 
 
-		//hr = DirectXViewer::DXVLoadMaterialData("assets/Idle.mat", &testmatdata_p);
+		hr = DirectXViewer::DXVLoadMaterialData("assets/Idle.mat", &testmatdata_p);
 		if (FAILED(hr)) return hr;
 
-		//hr = DirectXViewer::DXVCreateMaterial(&testmatdata_p[0], &testmat_p);
+		hr = DirectXViewer::DXVCreateMaterial(&testmatdata_p[0], &testmat_p);
 		if (FAILED(hr)) return hr;
 
 
@@ -66,17 +66,19 @@ namespace DXVInterface
 		uint32_t offsets[] = { 0 };
 
 		// TODO: Add draw code here
-		//DirectXViewer::DxSetVertexBuffer(&testmesh_p->vertexBuffer_p);
-		//DirectXViewer::DxSetIndexBuffer(testmesh_p->indexBuffer_p);
-		//DirectXViewer::DxDrawIndexed(testmesh_p->indexCount);
+		DirectXViewer::D3DSetVertexBuffer(&testmesh_p->vertexBuffer_p);
+		DirectXViewer::D3DSetIndexBuffer(testmesh_p->indexBuffer_p);
+		DirectXViewer::D3DDrawIndexed(testmesh_p->indexCount);
 
 		DirectXViewer::Present();
 	}
 	void Cleanup()
 	{
 		// TODO: Add cleanup code here
-		//delete testmesh_p;
-		//delete testmat_p;
+		delete testmesh_p;
+		delete testmeshdata_p;
+		delete testmat_p;
+		delete testmatdata_p;
 
 
 		swapChain_p = nullptr;

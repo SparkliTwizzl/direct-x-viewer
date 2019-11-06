@@ -7,7 +7,7 @@
 #include <Windows.h>
 
 #include "debug.h"
-//#include "DXVInterface.h"
+#include "DXVInterface.h"
 
 
 #define MAX_LOADSTRING 100
@@ -45,10 +45,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	//if (FAILED(DXVInterface::Init(&hWnd)))
-	//{
-	//	return FALSE;
-	//}
+	if (FAILED(DXVInterface::Init(&hWnd)))
+	{
+		return FALSE;
+	}
 
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DIRECTXVIEWER));
 
@@ -66,10 +66,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (msg.message == WM_QUIT)
 			break;
 
-		//Interface::Update(&msg);
+		DXVInterface::Update(&msg);
 	}
 
-	//DXVInterface::Cleanup();
+	DXVInterface::Cleanup();
 
 	_CrtDumpMemoryLeaks();
 

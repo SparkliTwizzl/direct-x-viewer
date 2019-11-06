@@ -1,14 +1,14 @@
 #pragma once
 
+#include "debug.h"
+
+#include <Windows.h>
 #include <array>
 #include <cstdint>
-#include <Windows.h>
 
 #include <d3d11.h>
 #pragma comment(lib, "d3d11.lib")
 #include <DirectXMath.h>
-
-#include "debug.h"
 
 #include "colors.h"
 
@@ -19,6 +19,7 @@ using namespace DirectX;
 namespace DirectXViewer
 {
 	using filepath_t = std::array<char, 260>;
+
 
 #pragma region Defines
 #define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
@@ -155,7 +156,7 @@ namespace DirectXViewer
 		float surface_shininess;
 		XMFLOAT3 pad;
 	};
-#pragma endregion all added
+#pragma endregion
 
 
 #pragma region Basic Functions
@@ -217,16 +218,16 @@ namespace DirectXViewer
 	void Present(UINT _syncInterval = 1, UINT _flags = 0);
 
 	// Sets the current vertex buffer
-	void DxSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
+	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
 
 	// Sets the current index buffer
-	void DxSetIndexBuffer(ID3D11Buffer* _ibuffer_p);
+	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p);
 
 	// Draw raw vertices of current vertex buffer
-	void DxDraw(uint32_t _numVerts);
+	void D3DDraw(uint32_t _numVerts);
 
 	// Draw indexed vertices of current vertex and index buffer
-	void DxDrawIndexed(uint32_t _numInds);
+	void D3DDrawIndexed(uint32_t _numInds);
 #pragma endregion
 
 #pragma region Mesh/Material Functions
@@ -259,7 +260,7 @@ namespace DirectXViewer
 
 #pragma region DirectX Helper Functions
 	// Creates and stores a D3D11 depth stencil and corresponding depth stencil view
-	HRESULT DxCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp);
+	HRESULT D3DCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp);
 
 	// Creates and stores a D3D11 sampler state
 	// DEFAULTS:
@@ -269,19 +270,19 @@ namespace DirectXViewer
 	//  _comp = D3D11_COMPARISON_NEVER
 	//  _minLod = 0.0f
 	//  _maxLod = D3D11_FLOAT_MAX
-	HRESULT DxCreateSamplerState(
+	HRESULT D3DCreateSamplerState(
 		ID3D11SamplerState** _samplerState_pp, D3D11_FILTER _filter,
 		D3D11_TEXTURE_ADDRESS_MODE _addressU = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_MODE _addressV = D3D11_TEXTURE_ADDRESS_WRAP,
 		D3D11_COMPARISON_FUNC _comp = D3D11_COMPARISON_NEVER, float _minLod = 0.0f, float _maxLod = D3D11_FLOAT32_MAX);
 
 	// Creates and stores a D3D11 constant buffer
-	HRESULT DxCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp);
+	HRESULT D3DCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp);
 
 	// Creates and stores a D3D11 vertex buffer from a DXV vertex array
-	HRESULT DxCreateVertexBuffer(uint32_t _vertCount, DXVVERTEX* _verts, ID3D11Buffer** _vbuffer_pp);
+	HRESULT D3DCreateVertexBuffer(uint32_t _vertCount, DXVVERTEX* _verts, ID3D11Buffer** _vbuffer_pp);
 
 	// Creates and stores a D3D11 index buffer from a DXV vertex array
-	HRESULT DxCreateIndexBuffer(uint32_t _indCount, uint32_t* _inds, ID3D11Buffer** _ibuffer_pp);
+	HRESULT D3DCreateIndexBuffer(uint32_t _indCount, uint32_t* _inds, ID3D11Buffer** _ibuffer_pp);
 
 	// Initializes a D3D11 viewport
 	// DEFAULTS:
@@ -289,7 +290,7 @@ namespace DirectXViewer
 	//  _topLeftY = 0
 	//  _minDepth = 0.0f
 	//  _maxDepth = 1.0f
-	void DxConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
+	void D3DConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
 #pragma endregion all added
 
 }
