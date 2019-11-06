@@ -1,6 +1,6 @@
 Camera controls:
-A/D			: move left/right
-W/S			: move forward/backward
-Space/Shift	: move up/down
+A/D : move left/right
+W/S : move forward/backward
+Space/Shift : move up/down
 
-Rmouse		: rotate
+Rmouse : rotate

@@ -20,7 +20,6 @@ namespace DirectXViewer
 {
 	using filepath_t = std::array<char, 260>;
 
-
 #pragma region Defines
 #define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
 #pragma endregion
@@ -159,20 +158,6 @@ namespace DirectXViewer
 #pragma endregion
 
 
-#pragma region Basic Functions
-	// Creates and initializes automatically created D3D and DXV resources
-	// Additional resources must be created manually after this function is called
-	HRESULT Init(HWND* _hWnd_p);
-
-	// Handles updates for automatically created D3D and DXV resources
-	// Additional updates must be done manually after this function is called
-	void Update(const MSG* _msg);
-
-	// Frees memory used by automatically created D3D and DXV resources
-	// Additional heap memory must be cleared manually before this function is called
-	void Cleanup();
-#pragma endregion
-
 #pragma region Getters/Setters
 	// Returns the world matrix
 	XMMATRIX GetWorldMatrix();
@@ -204,6 +189,20 @@ namespace DirectXViewer
 
 	// Sets the projection matrix
 	void SetProjectionMatrix(XMMATRIX _m);
+#pragma endregion
+
+#pragma region Basic Functions
+	// Creates and initializes automatically created D3D and DXV resources
+	// Additional resources must be created manually after this function is called
+	HRESULT Init(HWND* _hWnd_p);
+
+	// Handles updates for automatically created D3D and DXV resources
+	// Additional updates must be done manually after this function is called
+	void Update(const MSG* _msg);
+
+	// Frees memory used by automatically created D3D and DXV resources
+	// Additional heap memory must be cleared manually before this function is called
+	void Cleanup();
 #pragma endregion
 
 #pragma region Draw Functions
@@ -258,7 +257,7 @@ namespace DirectXViewer
 	void RemoveObjectFromScene(DXVOBJECT* _obj_p);
 #pragma endregion
 
-#pragma region DirectX Helper Functions
+#pragma region D3D Helper Functions
 	// Creates and stores a D3D11 depth stencil and corresponding depth stencil view
 	HRESULT D3DCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp);
 

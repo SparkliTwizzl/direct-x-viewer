@@ -306,6 +306,20 @@ namespace DirectXViewer
 	}
 #pragma endregion
 
+#pragma region Getters/Setters
+	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
+	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
+	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
+	ID3D11Device* GetDevice() { return device_p; }
+	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
+	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
+	const char* GetLastError() { return errormsg; }
+
+	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
+	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
+	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+#pragma endregion
+
 #pragma region Basic Functions
 	HRESULT Init(HWND* _hWnd_p)
 	{
@@ -392,27 +406,11 @@ namespace DirectXViewer
 
 #undef RELEASE
 
-
 		sceneObjects.clear();
-
 
 		// uninitialize WIC texture loader
 		CoUninitialize();
 	}
-#pragma endregion
-
-#pragma region Getters/Setters
-	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
-	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
-	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
-	ID3D11Device* GetDevice() { return device_p; }
-	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
-	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
-	const char* GetLastError() { return errormsg; }
-
-	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
-	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
-	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
 #pragma endregion
 
 #pragma region Draw Functions
@@ -631,7 +629,7 @@ namespace DirectXViewer
 	}
 #pragma endregion
 
-#pragma region DirectX Helper Functions
+#pragma region D3D Helper Functions
 	HRESULT D3DCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp)
 	{
 		HRESULT hr;
