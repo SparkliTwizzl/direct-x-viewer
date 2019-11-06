@@ -75,10 +75,10 @@ namespace DXVInterface
 	void Cleanup()
 	{
 		// TODO: Add cleanup code here
-		delete testmesh_p;
-		delete testmeshdata_p;
 		delete testmat_p;
 		delete testmatdata_p;
+		delete testmesh_p;
+		delete testmeshdata_p;
 
 
 		swapChain_p = nullptr;

@@ -171,7 +171,7 @@ namespace DirectXViewer
 	// Frees memory used by automatically created D3D and DXV resources
 	// Additional heap memory must be cleared manually before this function is called
 	void Cleanup();
-#pragma endregion all added
+#pragma endregion
 
 #pragma region Getters/Setters
 	// Returns the world matrix
@@ -291,6 +291,6 @@ namespace DirectXViewer
 	//  _minDepth = 0.0f
 	//  _maxDepth = 1.0f
 	void D3DConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
-#pragma endregion all added
+#pragma endregion
 
 }

@@ -33,6 +33,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
 	// TODO: Place code here.
+	// set automatic memory leak reporting on program exit
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -51,7 +53,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DIRECTXVIEWER));
-
 	MSG msg;
 
 	// Main message loop:
@@ -70,8 +71,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	DXVInterface::Cleanup();
-
-	_CrtDumpMemoryLeaks();
 
 	return (int)msg.wParam;
 }

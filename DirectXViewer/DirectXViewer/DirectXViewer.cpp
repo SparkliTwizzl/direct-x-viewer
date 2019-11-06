@@ -55,7 +55,7 @@ namespace DirectXViewer
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
 
-	//std::vector<DXVOBJECT*>			sceneObjects; // SOURCE OF MYSTERY MEMORY LEAK
+	std::vector<DXVOBJECT*>			sceneObjects; // SOURCE OF MYSTERY MEMORY LEAK
 
 	// input
 #define INPUT_X_NEG 'A'
@@ -323,7 +323,7 @@ namespace DirectXViewer
 		// initialize basic D3D resources
 		hr = InitD3DResources();
 		if (FAILED(hr)) return hr;
-		
+
 
 		errormsg = "Initialization error";
 
@@ -391,6 +391,9 @@ namespace DirectXViewer
 		RELEASE(device_p);
 
 #undef RELEASE
+
+
+		sceneObjects.clear();
 
 
 		// uninitialize WIC texture loader
@@ -534,14 +537,14 @@ namespace DirectXViewer
 		uint32_t numMats = 0;
 		uint32_t numPaths = 0;
 		filepath_t* paths_p = nullptr;
-		SIMPLEMATERIAL* inData_p = nullptr;
+		SIMPLEMATERIAL* simpledata_p = nullptr;
 		DXVMATERIALDATA* matdata_p = nullptr;
 
 		// load data from file
 		fin.read((char*)&numMats, sizeof(numMats));
-		inData_p = new SIMPLEMATERIAL[numMats];
+		simpledata_p = new SIMPLEMATERIAL[numMats];
 		matdata_p = new DXVMATERIALDATA[numMats];
-		fin.read((char*)&inData_p[0], numMats * sizeof(SIMPLEMATERIAL));
+		fin.read((char*)&simpledata_p[0], numMats * sizeof(SIMPLEMATERIAL));
 		fin.read((char*)&numPaths, sizeof(numPaths));
 		paths_p = new filepath_t[numPaths];
 		fin.read((char*)&paths_p[0], numPaths * sizeof(filepath_t));
@@ -551,17 +554,17 @@ namespace DirectXViewer
 		{
 			for (uint32_t c = 0; c < SIMPLEMATERIAL::ComponentType_e::Count; c++)
 			{
-				matdata_p[i].components[c].value.x = inData_p[i][c].value[0];
-				matdata_p[i].components[c].value.y = inData_p[i][c].value[1];
-				matdata_p[i].components[c].value.z = inData_p[i][c].value[2];
+				matdata_p[i].components[c].value.x = simpledata_p[i][c].value[0];
+				matdata_p[i].components[c].value.y = simpledata_p[i][c].value[1];
+				matdata_p[i].components[c].value.z = simpledata_p[i][c].value[2];
 
-				matdata_p[i].components[c].factor = inData_p[i][c].factor;
+				matdata_p[i].components[c].factor = simpledata_p[i][c].factor;
 
-				memcpy(matdata_p[i].components[c].filepath, (const void*)&paths_p[inData_p[i].components[c].input], 260);
+				memcpy(matdata_p[i].components[c].filepath, (const void*)&paths_p[simpledata_p[i].components[c].input], 260);
 			}
 		}
 
-		delete[] inData_p;
+		delete[] simpledata_p;
 		delete[] paths_p;
 
 		// store loaded data
@@ -615,17 +618,17 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Scene Functions
-	//void AddObjectToScene(DXVOBJECT* _obj_p) { if (_obj_p != nullptr) sceneObjects.push_back(_obj_p); }
-	//DXVOBJECT* GetObjectFromScene(uint16_t _i) { return sceneObjects[_i]; }
-	//void RemoveObjectFromScene(DXVOBJECT* _obj_p)
-	//{
-	//	for (uint32_t i = 0; i < sceneObjects.size(); i++)
-	//		if (sceneObjects[i] == _obj_p)
-	//		{
-	//			sceneObjects.erase(sceneObjects.begin() + i);
-	//			break;
-	//		}
-	//}
+	void AddObjectToScene(DXVOBJECT* _obj_p) { if (_obj_p != nullptr) sceneObjects.push_back(_obj_p); }
+	DXVOBJECT* GetObjectFromScene(uint16_t _i) { return sceneObjects[_i]; }
+	void RemoveObjectFromScene(DXVOBJECT* _obj_p)
+	{
+		for (uint32_t i = 0; i < sceneObjects.size(); i++)
+			if (sceneObjects[i] == _obj_p)
+			{
+				sceneObjects.erase(sceneObjects.begin() + i);
+				break;
+			}
+	}
 #pragma endregion
 
 #pragma region DirectX Helper Functions
