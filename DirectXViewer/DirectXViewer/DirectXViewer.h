@@ -18,9 +18,9 @@ using namespace DirectX;
 
 namespace DirectXViewer
 {
+#pragma region Defines
 	using filepath_t = std::array<char, 260>;
 
-#pragma region Defines
 #define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
 #pragma endregion
 
@@ -148,14 +148,16 @@ namespace DirectXViewer
 	// Vertex shader constant buffer data container
 	struct DXVCBUFFER_VS
 	{
-		XMMATRIX world;
-		XMMATRIX view;
-		XMMATRIX projection;
+		XMMATRIX	world;
+		XMMATRIX	view;
+		XMMATRIX	projection;
+		XMMATRIX	worldIT;
 	};
 
 	// Pixel shader constant buffer data container
 	struct DXVCBUFFER_PS
 	{
+		XMFLOAT4	cam_pos;
 		XMFLOAT3	light_pos;
 		XMFLOAT3	light_color;
 		float		light_power;
@@ -164,7 +166,7 @@ namespace DirectXViewer
 #pragma endregion
 
 
-#pragma region Getters/Setters
+#pragma region Getters
 	// Returns the default world matrix
 	XMMATRIX GetDefaultWorldMatrix();
 
@@ -185,8 +187,9 @@ namespace DirectXViewer
 
 	// Returns the last error message generated
 	const char* GetLastError();
+#pragma endregion
 
-
+#pragma region Setters
 	// Sets the default world matrix
 	void SetDefaultWorldMatrix(XMMATRIX _m);
 
@@ -196,7 +199,6 @@ namespace DirectXViewer
 	// Sets the default projection matrix
 	void SetDefaultProjectionMatrix(XMMATRIX _m);
 
-
 	// Sets the world matrix in the D3D vertex shader constant buffer
 	void SetCurrentWorldMatrix(XMMATRIX _m);
 
@@ -205,6 +207,7 @@ namespace DirectXViewer
 
 	// Sets the projection matrix in the D3D vertex shader constant buffer
 	void SetCurrentProjectionMatrix(XMMATRIX _m);
+
 
 	// Sets the current D3D vertex buffer
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
@@ -223,6 +226,9 @@ namespace DirectXViewer
 
 	// Sets the current D3D normal map material
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p);
+
+	// Sets the color to clear the screen to
+	void D3DSetClearToColor(float _color[4]);
 
 
 	// Sets the current D3D vertex resources from a DXVMESH

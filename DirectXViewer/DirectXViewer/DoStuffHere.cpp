@@ -13,6 +13,11 @@ namespace DXVInterface
 	uint32_t offsets[] = { 0 };
 
 	// TODO: Add variables here
+	float clearToColor[] = COLOR_GREY_DARK;
+
+	const char* testmesh_filename = "assets/Idle.mesh";
+	const char* testmat_filename = "assets/Idle.mat";
+
 	DirectXViewer::DXVMESHDATA*			testmeshdata_p = nullptr;
 	DirectXViewer::DXVMESH*				testmesh_p = nullptr;
 
@@ -27,14 +32,15 @@ namespace DXVInterface
 	HRESULT ManualInit()
 	{
 		HRESULT hr;
+		
+		DirectXViewer::D3DSetClearToColor(clearToColor);
 
-
-		XMVECTOR eye = { 0, 3, 10 };
+		XMVECTOR eye = { 0, 7, 7 };
 		XMVECTOR at = { 0, 3, 0 };
 		XMVECTOR up = { 0, 1, 0 };
 		DirectXViewer::SetDefaultViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
-		hr = DirectXViewer::DXVLoadAndCreateObject("assets/Idle.mesh", "assets/Idle.mat", &testmeshdata_p, &testmesh_p, &testmatdata_p, &testmat_p, &testobj);
+		hr = DirectXViewer::DXVLoadAndCreateObject(testmesh_filename, testmat_filename, &testmeshdata_p, &testmesh_p, &testmatdata_p, &testmat_p, &testobj);
 		if (FAILED(hr)) return hr;
 
 		DirectXViewer::AddObjectToScene(&testobj);

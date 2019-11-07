@@ -12,15 +12,14 @@
 
 namespace DirectXViewer
 {
-#pragma region Variables
-
-	// window
+#pragma region Window Variables
 	HWND*							hWnd_p = nullptr;
 
 	uint32_t						windowWidth = 0;
 	uint32_t						windowHeight = 0;
+#pragma endregion
 
-	// D3D
+#pragma region D3D Variables
 	D3D_DRIVER_TYPE					driverType = D3D_DRIVER_TYPE_NULL;
 	D3D_FEATURE_LEVEL				featureLevel = D3D_FEATURE_LEVEL_11_0;
 
@@ -47,28 +46,30 @@ namespace DirectXViewer
 
 	D3D11_VIEWPORT					viewport;
 
-	// DXV
-	const char*						errormsg;
-
 	uint32_t						strides[] = { sizeof(DXVVERTEX) };
 	uint32_t						offsets[] = { 0 };
+#pragma endregion
+
+#pragma region DXV Variables
+	const char*						errormsg;
 
 	XMFLOAT4X4						world;
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
 
-	float							clearToColor[] = COLOR_GREY;
+	float							clearToColor[4] = COLOR_BLACK;
 
-	XMVECTOR						light_pos = { 3.0f, 3.0f, 0.0f };
-	XMFLOAT3						light_color = { 1.0f, 1.0f, 1.0f };
-	float							light_power = 1.0f;
+	XMVECTOR						light_pos = { 0.0f, 5.0f, 5.0f };
+	XMFLOAT4						light_color = COLOR_WHITE;
+	float							light_power = 100.0f;
 	float							light_rotationSpeed = 1.0f;
 
-	float							surface_shininess = 1.0f;
+	float							surface_shininess = 10.0f;
 
 	std::vector<DXVOBJECT*>			sceneObjects;
+#pragma endregion
 
-	// input
+#pragma region Input Variables
 #define INPUT_X_NEG 'A'
 #define INPUT_X_POS 'D'
 #define INPUT_Y_NEG VK_SHIFT
@@ -97,11 +98,18 @@ namespace DirectXViewer
 
 	const float						camTranslationSpeed = 4.0f;
 	const float						camRotationSpeed = 0.1f;
-
 #pragma endregion
 
 
 #pragma region Private Helper Functions
+	// setters
+
+	// sets the inverse-transpose world matrix (used for normal vectors in shaders)
+	void SetWorldITMatrix(XMMATRIX _m) { cbuffer_vs.worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
+
+
+	// init
+
 	HRESULT	InitD3DResources()
 	{
 		HRESULT hr;
@@ -208,6 +216,10 @@ namespace DirectXViewer
 
 		return hr;
 	}
+
+
+	// update
+
 	void ReadInputs(const MSG* _msg)
 	{
 		// camera translation
@@ -316,7 +328,7 @@ namespace DirectXViewer
 	}
 #pragma endregion
 
-#pragma region Getters/Setters
+#pragma region Getters
 	const char* GetLastError() { return errormsg; }
 
 	XMMATRIX GetDefaultWorldMatrix() { return XMLoadFloat4x4(&world); }
@@ -329,13 +341,23 @@ namespace DirectXViewer
 	ID3D11Device* GetDevice() { return device_p; }
 	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
 	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
+#pragma endregion
 
-
+#pragma region Setters
 	void SetDefaultWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
 	void SetDefaultViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
 	void SetDefaultProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
-	void SetCurrentWorldMatrix(XMMATRIX _m) { cbuffer_vs.world = _m; }
-	void SetCurrentViewMatrix(XMMATRIX _m) { cbuffer_vs.view = _m; }
+	void SetCurrentWorldMatrix(XMMATRIX _m)
+	{
+		SetWorldITMatrix(_m);
+		cbuffer_vs.world = _m;
+	}
+	void SetCurrentViewMatrix(XMMATRIX _m)
+	{
+		cbuffer_vs.view = _m;
+		XMVECTOR cam_pos = XMMatrixInverse(nullptr, _m).r[3];
+		cbuffer_ps.cam_pos = { XMVectorGetX(cam_pos), XMVectorGetY(cam_pos), XMVectorGetZ(cam_pos), XMVectorGetW(cam_pos) };
+	}
 	void SetCurrentProjectionMatrix(XMMATRIX _m) { cbuffer_vs.projection = _m; }
 
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
@@ -344,6 +366,13 @@ namespace DirectXViewer
 	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
 	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(3, 1, &_material_p); }
+	void D3DSetClearToColor(float _color[4])
+	{
+		clearToColor[0] = _color[0];
+		clearToColor[1] = _color[1];
+		clearToColor[2] = _color[2];
+		clearToColor[3] = _color[3];
+	}
 
 	void DXVSetMesh(DXVMESH* _mesh_p)
 	{
@@ -426,7 +455,7 @@ namespace DirectXViewer
 
 
 		// orbit light around origin
-		light_pos = (XMMatrixTranslationFromVector(light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
+		//light_pos = (XMMatrixTranslationFromVector(light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
 
 
 		// read input and update camera
@@ -485,13 +514,13 @@ namespace DirectXViewer
 		deviceContext_p->VSSetConstantBuffers(1, 1, &cbuffer_d3d_ps_p);
 
 		// set vertex shader constant buffer values
-		cbuffer_vs.world = GetDefaultWorldMatrix();
-		cbuffer_vs.view = GetDefaultViewMatrix();
-		cbuffer_vs.projection = GetDefaultProjectionMatrix();
+		SetCurrentWorldMatrix(GetDefaultWorldMatrix());
+		SetCurrentViewMatrix(GetDefaultViewMatrix());
+		SetCurrentProjectionMatrix(GetDefaultProjectionMatrix());
 		UpdateVSConstantBuffer();
 
 		// set pixel shader constant buffer values
-		cbuffer_ps.light_color = light_color;
+		cbuffer_ps.light_color = { light_color.x, light_color.y, light_color.z };
 		cbuffer_ps.light_pos = XMFLOAT3(XMVectorGetX(light_pos), XMVectorGetY(light_pos), XMVectorGetZ(light_pos));
 		cbuffer_ps.light_power = light_power;
 		cbuffer_ps.surface_shininess = surface_shininess;
