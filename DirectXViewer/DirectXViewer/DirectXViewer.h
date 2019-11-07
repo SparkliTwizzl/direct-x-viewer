@@ -38,10 +38,10 @@ namespace DirectXViewer
 	// DXV mesh data container
 	struct DXVMESHDATA
 	{
-		uint32_t vertexCount = 0;
-		uint32_t indexCount = 0;
-		DXVVERTEX* vertices = nullptr;
-		uint32_t* indices = nullptr;
+		uint32_t		vertexCount = 0;
+		uint32_t		indexCount = 0;
+		DXVVERTEX*		vertices = nullptr;
+		uint32_t*		indices = nullptr;
 
 		~DXVMESHDATA()
 		{
@@ -55,10 +55,10 @@ namespace DirectXViewer
 	//  Must be contained in a DXVOBJECT along with a DXVMATERIAL to be added to scene
 	struct DXVMESH
 	{
-		uint32_t vertexCount = 0;
-		uint32_t indexCount = 0;
-		ID3D11Buffer* vertexBuffer_p = nullptr;
-		ID3D11Buffer* indexBuffer_p = nullptr;
+		uint32_t		vertexCount = 0;
+		uint32_t		indexCount = 0;
+		ID3D11Buffer*	vertexBuffer_p = nullptr;
+		ID3D11Buffer*	indexBuffer_p = nullptr;
 
 		~DXVMESH()
 		{
@@ -72,9 +72,9 @@ namespace DirectXViewer
 	{
 		struct COMPONENT
 		{
-			XMFLOAT3 value = { 0.0f, 0.0f, 0.0f };
-			float factor = 0.0f;
-			char filepath[260];
+			XMFLOAT3	value = { 0.0f, 0.0f, 0.0f };
+			float		factor = 0.0f;
+			char		filepath[260];
 		};
 
 		enum ComponentType_e
@@ -99,10 +99,10 @@ namespace DirectXViewer
 	{
 		struct COMPONENT
 		{
-			XMFLOAT3 value = { 0.0f, 0.0f, 0.0f };
-			float factor = 0.0f;
-			ID3D11Resource*	texture_p = nullptr;
-			ID3D11ShaderResourceView* textureView_p = nullptr;
+			XMFLOAT3					value = { 0.0f, 0.0f, 0.0f };
+			float						factor = 0.0f;
+			ID3D11Resource*				texture_p = nullptr;
+			ID3D11ShaderResourceView*	textureView_p = nullptr;
 		};
 
 		enum ComponentType_e
@@ -134,8 +134,9 @@ namespace DirectXViewer
 	//  Must have both mesh and material to be used by scene
 	struct DXVOBJECT
 	{
-		DXVMESH* mesh_p = nullptr;
-		DXVMATERIAL* material_p = nullptr;
+		XMMATRIX		modeling;
+		DXVMESH*		mesh_p = nullptr;
+		DXVMATERIAL*	material_p = nullptr;
 	};
 
 	// Vertex shader constant buffer data container
@@ -158,14 +159,14 @@ namespace DirectXViewer
 
 
 #pragma region Getters/Setters
-	// Returns the world matrix
-	XMMATRIX GetWorldMatrix();
+	// Returns the default world matrix
+	XMMATRIX GetDefaultWorldMatrix();
 
-	// Returns the view matrix
-	XMMATRIX GetViewMatrix();
+	// Returns the default view matrix
+	XMMATRIX GetDefaultViewMatrix();
 
-	// Returns the projection matrix
-	XMMATRIX GetProjectionMatrix();
+	// Returns the default projection matrix
+	XMMATRIX GetDefaultProjectionMatrix();
 
 	// Returns a pointer to the device
 	ID3D11Device* GetDevice();
@@ -180,14 +181,49 @@ namespace DirectXViewer
 	const char* GetLastError();
 
 
-	// Sets the world matrix
-	void SetWorldMatrix(XMMATRIX _m);
+	// Sets the default world matrix
+	void SetDefaultWorldMatrix(XMMATRIX _m);
 
-	// Sets the view matrix
-	void SetViewMatrix(XMMATRIX _m);
+	// Sets the default view matrix
+	void SetDefaultViewMatrix(XMMATRIX _m);
 
-	// Sets the projection matrix
-	void SetProjectionMatrix(XMMATRIX _m);
+	// Sets the default projection matrix
+	void SetDefaultProjectionMatrix(XMMATRIX _m);
+
+
+	// Sets the world matrix in the D3D vertex shader constant buffer
+	void SetCurrentWorldMatrix(XMMATRIX _m);
+
+	// Sets the view matrix in the D3D vertex shader constant buffer
+	void SetCurrentViewMatrix(XMMATRIX _m);
+
+	// Sets the projection matrix in the D3D vertex shader constant buffer
+	void SetCurrentProjectionMatrix(XMMATRIX _m);
+
+	// Sets the current D3D vertex buffer
+	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
+
+	// Sets the current D3D index buffer
+	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p);
+
+	// Sets the current D3D diffuse material
+	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p);
+
+	// Sets the current D3D emissive material
+	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p);
+
+	// Sets the current D3D specular material
+	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p);
+
+
+	// Sets the current D3D vertex resources from a DXVMESH
+	void DXVSetMesh(DXVMESH* _mesh_p);
+
+	// Sets the current D3D pixel resources from a DXVMATERIAL
+	void DXVSetMaterial(DXVMATERIAL* _material_p);
+
+	// Sets the current D3D drawing resources from a DXVOBJECT
+	void DXVSetObject(DXVOBJECT* _object_p);
 #pragma endregion
 
 #pragma region Basic Functions
@@ -215,32 +251,6 @@ namespace DirectXViewer
 	// NOTES:
 	//  Calling this function is only needed if you are drawing anything manually
 	void Present(UINT _syncInterval = 1, UINT _flags = 0);
-
-
-	// Sets the current D3D vertex resources from a DXVMESH
-	void DXVSetMesh(DXVMESH* _mesh_p);
-
-	// Sets the current D3D pixel resources from a DXVMATERIAL
-	void DXVSetMaterial(DXVMATERIAL* _material_p);
-
-	// Sets the current D3D drawing resources from a DXVOBJECT
-	void DXVSetObject(DXVOBJECT* _object_p);
-
-
-	// Sets the current D3D vertex buffer
-	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
-
-	// Sets the current D3D index buffer
-	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p);
-
-	// Sets the current D3D diffuse material
-	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p);
-
-	// Sets the current D3D emissive material
-	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p);
-
-	// Sets the current D3D specular material
-	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p);
 
 
 	// Draw raw vertices of current D3D vertex buffer
@@ -311,6 +321,13 @@ namespace DirectXViewer
 	//  _minDepth = 0.0f
 	//  _maxDepth = 1.0f
 	void D3DConfigureViewport(D3D11_VIEWPORT* _viewport_p, float _w, float _h, float _topLeftX = 0.0f, float _topLeftY = 0.0f, float _minDepth = 0.0f, float _maxDepth = 1.0f);
+
+
+	// Updates the vertex shader constant buffer subresource
+	void UpdateVSConstantBuffer();
+
+	// Updates the pixel shader constant buffer subresource
+	void UpdatePSConstantBuffer();
 #pragma endregion
 
 }

@@ -36,6 +36,9 @@ namespace DirectXViewer
 
 	ID3D11SamplerState*				samplerLinear_p = nullptr;
 
+	DXVCBUFFER_VS					cbuffer_vs;
+	DXVCBUFFER_PS					cbuffer_ps;
+
 	ID3D11Buffer*					cbuffer_vs_p = nullptr;
 	ID3D11Buffer*					cbuffer_ps_p = nullptr;
 
@@ -306,17 +309,52 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Getters/Setters
-	XMMATRIX GetWorldMatrix() { return XMLoadFloat4x4(&world); }
-	XMMATRIX GetViewMatrix() { return XMLoadFloat4x4(&view); }
-	XMMATRIX GetProjectionMatrix() { return XMLoadFloat4x4(&projection); }
+	const char* GetLastError() { return errormsg; }
+
+	XMMATRIX GetDefaultWorldMatrix() { return XMLoadFloat4x4(&world); }
+	XMMATRIX GetDefaultViewMatrix() { return XMLoadFloat4x4(&view); }
+	XMMATRIX GetDefaultProjectionMatrix() { return XMLoadFloat4x4(&projection); }
+	XMMATRIX GetCurrentWorldMatrix() { return cbuffer_vs.world; }
+	XMMATRIX GetCurrentViewMatrix() { return cbuffer_vs.view; }
+	XMMATRIX GetCurrentProjectionMatrix() { return cbuffer_vs.projection; }
+
 	ID3D11Device* GetDevice() { return device_p; }
 	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
 	IDXGISwapChain* GetSwapChain() { return swapChain_p; }
-	const char* GetLastError() { return errormsg; }
 
-	void SetWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
-	void SetViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
-	void SetProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+
+	void SetDefaultWorldMatrix(XMMATRIX _m) { XMStoreFloat4x4(&world, _m); }
+	void SetDefaultViewMatrix(XMMATRIX _m) { XMStoreFloat4x4(&view, _m); }
+	void SetDefaultProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
+	void SetCurrentWorldMatrix(XMMATRIX _m) { cbuffer_vs.world = _m; }
+	void SetCurrentViewMatrix(XMMATRIX _m) { cbuffer_vs.view = _m; }
+	void SetCurrentProjectionMatrix(XMMATRIX _m) { cbuffer_vs.projection = _m; }
+
+	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
+	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p) { deviceContext_p->IASetIndexBuffer(_ibuffer_p, IBUFFER_FORMAT, 0); }
+	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(0, 1, &_material_p); }
+	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
+	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
+
+	void DXVSetMesh(DXVMESH* _mesh_p)
+	{
+		D3DSetVertexBuffer(&_mesh_p->vertexBuffer_p);
+		D3DSetIndexBuffer(_mesh_p->indexBuffer_p);
+	}
+	void DXVSetMaterial(DXVMATERIAL* _material_p)
+	{
+		D3DSetDiffuseMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Diffuse].textureView_p);
+		D3DSetEmissiveMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Emissive].textureView_p);
+		D3DSetSpecularMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Specular].textureView_p);
+	}
+	void DXVSetObject(DXVOBJECT* _object_p)
+	{
+		SetCurrentWorldMatrix(_object_p->modeling);
+		DXVSetMesh(_object_p->mesh_p);
+		DXVSetMaterial(_object_p->material_p);
+
+		UpdateVSConstantBuffer();
+	}
 #pragma endregion
 
 #pragma region Basic Functions
@@ -342,14 +380,14 @@ namespace DirectXViewer
 
 
 		// initialize matrix values
-		SetWorldMatrix(XMMatrixIdentity());
+		SetDefaultWorldMatrix(XMMatrixIdentity());
 
 		XMVECTOR eye = { 0, 0, -5 };
 		XMVECTOR at = { 0, 0, 0 };
 		XMVECTOR up = { 0, 1, 0 };
-		SetViewMatrix(XMMatrixLookAtLH(eye, at, up));
+		SetDefaultViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
-		SetProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (float)windowHeight, 0.01f, 100.0f));
+		SetDefaultProjectionMatrix(XMMatrixPerspectiveFovLH(XM_PIDIV4, windowWidth / (float)windowHeight, 0.01f, 100.0f));
 
 
 		// initialize WIC texture loader
@@ -417,8 +455,8 @@ namespace DirectXViewer
 	{
 		float clearcolor[] = GREY;
 
-		DXVCBUFFER_VS cbuffer_vs = {};
-		DXVCBUFFER_PS cbuffer_ps = {};
+		cbuffer_vs = {};
+		cbuffer_ps = {};
 
 		deviceContext_p->RSSetViewports(1, &viewport);
 		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
@@ -427,12 +465,12 @@ namespace DirectXViewer
 		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearcolor);
 		deviceContext_p->ClearDepthStencilView(depthStencilView_p, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		cbuffer_vs.world = XMLoadFloat4x4(&world);
-		cbuffer_vs.view = XMLoadFloat4x4(&view);
-		cbuffer_vs.projection = XMLoadFloat4x4(&projection);
+		cbuffer_vs.world = GetDefaultWorldMatrix();
+		cbuffer_vs.view = GetDefaultViewMatrix();
+		cbuffer_vs.projection = GetDefaultProjectionMatrix();
 
-		deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0);
-		deviceContext_p->UpdateSubresource(cbuffer_ps_p, 0, nullptr, &cbuffer_ps, 0, 0);
+		UpdateVSConstantBuffer();
+		UpdatePSConstantBuffer();		
 
 		deviceContext_p->VSSetShader(shader_vertex_p, 0, 0);
 		deviceContext_p->PSSetShader(shader_pixel_p, 0, 0);
@@ -451,29 +489,6 @@ namespace DirectXViewer
 			Present();
 	}
 	void Present(UINT _syncInterval, UINT _flags) { swapChain_p->Present(_syncInterval, _flags); }
-
-	void DXVSetMesh(DXVMESH* _mesh_p)
-	{
-		D3DSetVertexBuffer(&_mesh_p->vertexBuffer_p);
-		D3DSetIndexBuffer(_mesh_p->indexBuffer_p);
-	}
-	void DXVSetMaterial(DXVMATERIAL* _material_p)
-	{
-		D3DSetDiffuseMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Diffuse].textureView_p);
-		D3DSetEmissiveMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Emissive].textureView_p);
-		D3DSetSpecularMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Specular].textureView_p);
-	}
-	void DXVSetObject(DXVOBJECT* _object_p)
-	{
-		DXVSetMesh(_object_p->mesh_p);
-		DXVSetMaterial(_object_p->material_p);
-	}
-
-	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
-	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p) { deviceContext_p->IASetIndexBuffer(_ibuffer_p, IBUFFER_FORMAT, 0); }
-	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(0, 1, &_material_p); }
-	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
-	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
 
 	void D3DDraw(uint32_t _numVerts) { deviceContext_p->Draw(_numVerts, 0); }
 	void D3DDrawIndexed(uint32_t _numInds) { deviceContext_p->DrawIndexed(_numInds, 0, 0); }
@@ -738,6 +753,9 @@ namespace DirectXViewer
 		_viewport_p->MinDepth = _minDepth;
 		_viewport_p->MaxDepth = _maxDepth;
 	}
+
+	void UpdateVSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0); }
+	void UpdatePSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_ps_p, 0, nullptr, &cbuffer_ps, 0, 0); }
 #pragma endregion
 
 }
