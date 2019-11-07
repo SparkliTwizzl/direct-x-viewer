@@ -1,5 +1,6 @@
 #pragma once
 
+
 #define WHITE { 1.0f, 1.0f, 1.0f, 1.0f }
 #define GREY_LIGHT { 0.75f, 0.75f, 0.75f, 1.0f }
 #define GREY { 0.5f, 0.5f, 0.5f, 1.0f }

@@ -55,7 +55,7 @@ namespace DirectXViewer
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
 
-	std::vector<DXVOBJECT*>			sceneObjects; // SOURCE OF MYSTERY MEMORY LEAK
+	std::vector<DXVOBJECT*>			sceneObjects;
 
 	// input
 #define INPUT_X_NEG 'A'
@@ -94,7 +94,6 @@ namespace DirectXViewer
 	HRESULT	InitD3DResources()
 	{
 		HRESULT hr;
-
 
 		errormsg = "D3D initialization failed";
 
@@ -416,7 +415,7 @@ namespace DirectXViewer
 #pragma region Draw Functions
 	void Draw(bool _present)
 	{
-		float clearcolor[] = BLACK;
+		float clearcolor[] = GREY;
 
 		DXVCBUFFER_VS cbuffer_vs = {};
 		DXVCBUFFER_PS cbuffer_ps = {};
@@ -441,12 +440,41 @@ namespace DirectXViewer
 		deviceContext_p->PSSetSamplers(0, 1, &samplerLinear_p);
 
 
+		for (uint32_t i = 0; i < sceneObjects.size(); i++)
+		{
+			DXVSetObject(sceneObjects[i]);
+			D3DDrawIndexed(sceneObjects[i]->mesh_p->indexCount);
+		}
+
+
 		if (_present)
 			Present();
 	}
 	void Present(UINT _syncInterval, UINT _flags) { swapChain_p->Present(_syncInterval, _flags); }
+
+	void DXVSetMesh(DXVMESH* _mesh_p)
+	{
+		D3DSetVertexBuffer(&_mesh_p->vertexBuffer_p);
+		D3DSetIndexBuffer(_mesh_p->indexBuffer_p);
+	}
+	void DXVSetMaterial(DXVMATERIAL* _material_p)
+	{
+		D3DSetDiffuseMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Diffuse].textureView_p);
+		D3DSetEmissiveMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Emissive].textureView_p);
+		D3DSetSpecularMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Specular].textureView_p);
+	}
+	void DXVSetObject(DXVOBJECT* _object_p)
+	{
+		DXVSetMesh(_object_p->mesh_p);
+		DXVSetMaterial(_object_p->material_p);
+	}
+
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
 	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p) { deviceContext_p->IASetIndexBuffer(_ibuffer_p, IBUFFER_FORMAT, 0); }
+	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(0, 1, &_material_p); }
+	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
+	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
+
 	void D3DDraw(uint32_t _numVerts) { deviceContext_p->Draw(_numVerts, 0); }
 	void D3DDrawIndexed(uint32_t _numInds) { deviceContext_p->DrawIndexed(_numInds, 0, 0); }
 #pragma endregion

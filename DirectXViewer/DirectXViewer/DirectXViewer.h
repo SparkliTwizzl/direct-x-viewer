@@ -149,11 +149,10 @@ namespace DirectXViewer
 	// Pixel shader constant buffer data container
 	struct DXVCBUFFER_PS
 	{
-		XMFLOAT4 light_pos;
+		XMFLOAT3 light_pos;
 		XMFLOAT3 light_color;
 		float light_power;
 		float surface_shininess;
-		XMFLOAT3 pad;
 	};
 #pragma endregion
 
@@ -213,19 +212,41 @@ namespace DirectXViewer
 	void Draw(bool _present = true);
 
 	// Presents the scene to the window
-	// Only needed if you are drawing anything manually
+	// NOTES:
+	//  Calling this function is only needed if you are drawing anything manually
 	void Present(UINT _syncInterval = 1, UINT _flags = 0);
 
-	// Sets the current vertex buffer
+
+	// Sets the current D3D vertex resources from a DXVMESH
+	void DXVSetMesh(DXVMESH* _mesh_p);
+
+	// Sets the current D3D pixel resources from a DXVMATERIAL
+	void DXVSetMaterial(DXVMATERIAL* _material_p);
+
+	// Sets the current D3D drawing resources from a DXVOBJECT
+	void DXVSetObject(DXVOBJECT* _object_p);
+
+
+	// Sets the current D3D vertex buffer
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
 
-	// Sets the current index buffer
+	// Sets the current D3D index buffer
 	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p);
 
-	// Draw raw vertices of current vertex buffer
+	// Sets the current D3D diffuse material
+	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p);
+
+	// Sets the current D3D emissive material
+	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p);
+
+	// Sets the current D3D specular material
+	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p);
+
+
+	// Draw raw vertices of current D3D vertex buffer
 	void D3DDraw(uint32_t _numVerts);
 
-	// Draw indexed vertices of current vertex and index buffer
+	// Draw indexed vertices of current D3D vertex and index buffer
 	void D3DDrawIndexed(uint32_t _numInds);
 #pragma endregion
 

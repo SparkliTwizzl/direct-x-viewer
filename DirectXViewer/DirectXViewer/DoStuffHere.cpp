@@ -14,6 +14,8 @@ namespace DXVInterface
 
 	DirectXViewer::DXVMATERIALDATA*		testmatdata_p = nullptr;
 	DirectXViewer::DXVMATERIAL*			testmat_p = nullptr;
+
+	DirectXViewer::DXVOBJECT			testobj;
 #pragma endregion
 
 
@@ -50,6 +52,13 @@ namespace DXVInterface
 		if (FAILED(hr)) return hr;
 
 
+		testobj.mesh_p = testmesh_p;
+		testobj.material_p = testmat_p;
+
+
+		DirectXViewer::AddObjectToScene(&testobj);
+
+
 		return hr;
 	}
 	void Update(const MSG* _msg)
@@ -60,17 +69,24 @@ namespace DXVInterface
 
 
 		// If you are drawing manually, pass false to Draw() and call Present() after manual draws
-		DirectXViewer::Draw(false);
+		DirectXViewer::Draw();
 
-		uint32_t strides[] = { sizeof(DirectXViewer::DXVVERTEX) };
-		uint32_t offsets[] = { 0 };
+		//uint32_t strides[] = { sizeof(DirectXViewer::DXVVERTEX) };
+		//uint32_t offsets[] = { 0 };
 
 		// TODO: Add draw code here
-		DirectXViewer::D3DSetVertexBuffer(&testmesh_p->vertexBuffer_p);
-		DirectXViewer::D3DSetIndexBuffer(testmesh_p->indexBuffer_p);
-		DirectXViewer::D3DDrawIndexed(testmesh_p->indexCount);
+		//DirectXViewer::D3DSetVertexBuffer(&testobj.mesh_p->vertexBuffer_p);
+		//DirectXViewer::D3DSetIndexBuffer(testobj.mesh_p->indexBuffer_p);
 
-		DirectXViewer::Present();
+		//DirectXViewer::D3DSetDiffuseMaterial(testobj.material_p->components[DirectXViewer::DXVMATERIAL::ComponentType_e::Diffuse].textureView_p);
+		//DirectXViewer::D3DSetEmissiveMaterial(testobj.material_p->components[DirectXViewer::DXVMATERIAL::ComponentType_e::Emissive].textureView_p);
+		//DirectXViewer::D3DSetSpecularMaterial(testobj.material_p->components[DirectXViewer::DXVMATERIAL::ComponentType_e::Specular].textureView_p);
+
+		//DirectXViewer::DXVSetObject(&testobj);
+
+		//DirectXViewer::D3DDrawIndexed(testobj.mesh_p->indexCount);
+
+		//DirectXViewer::Present();
 	}
 	void Cleanup()
 	{

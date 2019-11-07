@@ -1,11 +1,13 @@
 #pragma pack_matrix( row_major )
 
+
 cbuffer ConstantBuffer : register(b0)
 {
 	float4x4 world;
 	float4x4 view;
 	float4x4 projection;
 };
+
 
 struct VSin
 {
@@ -14,6 +16,7 @@ struct VSin
 	float4 color : COLOR;
 	float2 uv : TEXCOORD;
 };
+
 
 struct VSout
 {
@@ -24,6 +27,7 @@ struct VSout
 	float4 world_pos : WORLDPOS;
 	float4 eye_pos : EYEPOS;
 };
+
 
 VSout main(VSin input)
 {
