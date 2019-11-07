@@ -4,26 +4,28 @@
 Texture2D tex_diffuse : register(t0);
 Texture2D tex_emissive : register(t1);
 Texture2D tex_specular : register(t2);
+Texture2D tex_normalmap : register(t3);
+
 SamplerState sampler_linear : register(s0);
 
 
 cbuffer ConstantBuffer : register(b1)
 {
-	float3 light_pos;
-	float3 light_color;
-	float light_power;
-	float surface_shininess;
+    float3 light_pos;
+    float3 light_color;
+    float light_power;
+    float surface_shininess;
 };
 
 
 struct VSout
 {
-	float4 pos : SV_POSITION;
-	float4 norm : NORMAL;
-	float4 color : COLOR;
-	float2 uv : TEXCOORD;
-	float4 world_pos : WORLDPOS;
-	float4 eye_pos : EYEPOS;
+    float4 pos : SV_POSITION;
+    float4 norm : NORMAL;
+    float4 color : COLOR;
+    float2 uv : TEXCOORD;
+    float4 world_pos : WORLDPOS;
+    float4 eye_pos : EYEPOS;
 };
 
 #define PSin VSout
@@ -31,7 +33,7 @@ struct VSout
 
 struct PSout
 {
-	float4 color : SV_TARGET;
+    float4 color : SV_TARGET;
 };
 
 
@@ -39,7 +41,13 @@ static const float4 ambient_light = { 0.25f, 0.25f, 0.25f, 0.0f };
 
 PSout main(PSin input)
 {
-	PSout output;
+    PSout output;
+
+    // sample material colors
+    float4 mat_diffuse = tex_diffuse.Sample(sampler_linear, input.uv);
+    float4 mat_emissive = tex_emissive.Sample(sampler_linear, input.uv);
+    float4 mat_specular = tex_specular.Sample(sampler_linear, input.uv);
+    float4 mat_normalmap = tex_normalmap.Sample(sampler_linear, input.uv);
 
     // get point light direction
     float3 light_dir = light_pos - input.world_pos.xyz;
@@ -66,11 +74,6 @@ PSout main(PSin input)
     float diffuse_intensity = saturate(NdotL);
     float specular_intensity = pow(saturate(NdotH), 1 + surface_shininess);
 
-    // sample material colors
-    float4 mat_diffuse = tex_diffuse.Sample(sampler_linear, input.uv);
-    float4 mat_emissive = tex_emissive.Sample(sampler_linear, input.uv);
-    float4 mat_specular = tex_specular.Sample(sampler_linear, input.uv);
-
     // calculate light colors
     float4 ambient = mat_diffuse * ambient_light;
     float4 diffuse = mat_diffuse * diffuse_intensity * light_intensity;
@@ -83,5 +86,5 @@ PSout main(PSin input)
     float4 color = ambient + diffuse + emissive + specular;
 
     output.color = color;
-	return output;
+    return output;
 }

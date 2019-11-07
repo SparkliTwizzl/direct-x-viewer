@@ -39,8 +39,8 @@ namespace DirectXViewer
 	DXVCBUFFER_VS					cbuffer_vs;
 	DXVCBUFFER_PS					cbuffer_ps;
 
-	ID3D11Buffer*					cbuffer_vs_p = nullptr;
-	ID3D11Buffer*					cbuffer_ps_p = nullptr;
+	ID3D11Buffer*					cbuffer_d3d_vs_p = nullptr;
+	ID3D11Buffer*					cbuffer_d3d_ps_p = nullptr;
 
 	ID3D11VertexShader*				shader_vertex_p = nullptr;
 	ID3D11PixelShader*				shader_pixel_p = nullptr;
@@ -49,7 +49,6 @@ namespace DirectXViewer
 
 	// DXV
 	const char*						errormsg;
-	int								refcount = 0;
 
 	uint32_t						strides[] = { sizeof(DXVVERTEX) };
 	uint32_t						offsets[] = { 0 };
@@ -57,6 +56,15 @@ namespace DirectXViewer
 	XMFLOAT4X4						world;
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
+
+	float							clearToColor[] = COLOR_GREY;
+
+	XMVECTOR						light_pos = { 3.0f, 3.0f, 0.0f };
+	XMFLOAT3						light_color = { 1.0f, 1.0f, 1.0f };
+	float							light_power = 1.0f;
+	float							light_rotationSpeed = 1.0f;
+
+	float							surface_shininess = 1.0f;
 
 	std::vector<DXVOBJECT*>			sceneObjects;
 
@@ -158,10 +166,10 @@ namespace DirectXViewer
 
 
 		// create D3D constant buffers
-		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_VS), &cbuffer_vs_p);
+		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_VS), &cbuffer_d3d_vs_p);
 		if (FAILED(hr)) return hr;
 
-		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_PS), &cbuffer_ps_p);
+		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_PS), &cbuffer_d3d_ps_p);
 		if (FAILED(hr)) return hr;
 
 
@@ -335,6 +343,7 @@ namespace DirectXViewer
 	void D3DSetDiffuseMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(0, 1, &_material_p); }
 	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
 	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
+	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(3, 1, &_material_p); }
 
 	void DXVSetMesh(DXVMESH* _mesh_p)
 	{
@@ -346,6 +355,7 @@ namespace DirectXViewer
 		D3DSetDiffuseMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Diffuse].textureView_p);
 		D3DSetEmissiveMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Emissive].textureView_p);
 		D3DSetSpecularMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::Specular].textureView_p);
+		D3DSetNormalMapMaterial(_material_p->components[DXVMATERIAL::ComponentType_e::NormalMap].textureView_p);
 	}
 	void DXVSetObject(DXVOBJECT* _object_p)
 	{
@@ -414,6 +424,11 @@ namespace DirectXViewer
 		prevTime = curTime;
 
 
+
+		// orbit light around origin
+		light_pos = (XMMatrixTranslationFromVector(light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
+
+
 		// read input and update camera
 		ReadInputs(_msg);
 		UpdateCamera(dt);
@@ -426,8 +441,8 @@ namespace DirectXViewer
 		RELEASE(shader_pixel_p);
 		RELEASE(shader_vertex_p);
 
-		RELEASE(cbuffer_ps_p);
-		RELEASE(cbuffer_vs_p);
+		RELEASE(cbuffer_d3d_ps_p);
+		RELEASE(cbuffer_d3d_vs_p);
 
 		RELEASE(samplerLinear_p);
 
@@ -453,31 +468,44 @@ namespace DirectXViewer
 #pragma region Draw Functions
 	void Draw(bool _present)
 	{
-		float clearcolor[] = GREY;
-
+		// clear constant buffer data
 		cbuffer_vs = {};
 		cbuffer_ps = {};
 
+		// set viewport
 		deviceContext_p->RSSetViewports(1, &viewport);
+
+		// set and clear render target and depth stencil
 		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
-		deviceContext_p->VSSetConstantBuffers(0, 1, &cbuffer_vs_p);
-		deviceContext_p->VSSetConstantBuffers(1, 1, &cbuffer_ps_p);
-		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearcolor);
+		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearToColor);
 		deviceContext_p->ClearDepthStencilView(depthStencilView_p, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
+		// set constant buffers
+		deviceContext_p->VSSetConstantBuffers(0, 1, &cbuffer_d3d_vs_p);
+		deviceContext_p->VSSetConstantBuffers(1, 1, &cbuffer_d3d_ps_p);
+
+		// set vertex shader constant buffer values
 		cbuffer_vs.world = GetDefaultWorldMatrix();
 		cbuffer_vs.view = GetDefaultViewMatrix();
 		cbuffer_vs.projection = GetDefaultProjectionMatrix();
-
 		UpdateVSConstantBuffer();
-		UpdatePSConstantBuffer();		
 
+		// set pixel shader constant buffer values
+		cbuffer_ps.light_color = light_color;
+		cbuffer_ps.light_pos = XMFLOAT3(XMVectorGetX(light_pos), XMVectorGetY(light_pos), XMVectorGetZ(light_pos));
+		cbuffer_ps.light_power = light_power;
+		cbuffer_ps.surface_shininess = surface_shininess;
+		UpdatePSConstantBuffer();
+
+		// set shaders
 		deviceContext_p->VSSetShader(shader_vertex_p, 0, 0);
 		deviceContext_p->PSSetShader(shader_pixel_p, 0, 0);
 
+		// set samplers
 		deviceContext_p->PSSetSamplers(0, 1, &samplerLinear_p);
 
 
+		// draw objects in scene
 		for (uint32_t i = 0; i < sceneObjects.size(); i++)
 		{
 			DXVSetObject(sceneObjects[i]);
@@ -494,7 +522,7 @@ namespace DirectXViewer
 	void D3DDrawIndexed(uint32_t _numInds) { deviceContext_p->DrawIndexed(_numInds, 0, 0); }
 #pragma endregion
 
-#pragma region Mesh/Material Functions
+#pragma region Mesh/Material/Object Functions
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp)
 	{
 		HRESULT hr;
@@ -540,6 +568,16 @@ namespace DirectXViewer
 			*_mesh_pp = mesh_p;
 		}
 
+		return hr;
+	}
+	HRESULT DXVLoadAndCreateMesh(const char* _filepath, DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp)
+	{
+		HRESULT hr;
+
+		hr = DXVLoadMeshData(_filepath, _meshdata_pp);
+		if (FAILED(hr)) return hr;
+
+		hr = DXVCreateMesh(*_meshdata_pp, _mesh_pp);
 		return hr;
 	}
 
@@ -656,6 +694,36 @@ namespace DirectXViewer
 		return hr;
 		//return S_OK;
 	}
+	HRESULT DXVLoadAndCreateMaterial(const char* _filepath, DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp)
+	{
+		HRESULT hr;
+
+		hr = DXVLoadMaterialData(_filepath, _matdata_pp);
+		if (FAILED(hr)) return hr;
+
+		hr = DXVCreateMaterial(*_matdata_pp, _material_pp);
+		return hr;
+	}
+
+	HRESULT DXVLoadAndCreateObject(
+		const char* _mesh_filepath, const char* _mat_filepath,
+		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
+		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
+		DXVOBJECT* _object_p)
+	{
+		HRESULT hr;
+
+		hr = DXVLoadAndCreateMesh(_mesh_filepath, _meshdata_pp, _mesh_pp);
+		if (FAILED(hr)) return hr;
+
+		hr = DXVLoadAndCreateMaterial(_mat_filepath, _matdata_pp, _material_pp);
+		if (FAILED(hr)) return hr;
+
+		_object_p->mesh_p = *_mesh_pp;
+		_object_p->material_p = *_material_pp;
+
+		return hr;
+	}
 #pragma endregion
 
 #pragma region Scene Functions
@@ -754,8 +822,8 @@ namespace DirectXViewer
 		_viewport_p->MaxDepth = _maxDepth;
 	}
 
-	void UpdateVSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_vs_p, 0, nullptr, &cbuffer_vs, 0, 0); }
-	void UpdatePSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_ps_p, 0, nullptr, &cbuffer_ps, 0, 0); }
+	void UpdateVSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_vs_p, 0, nullptr, &cbuffer_vs, 0, 0); }
+	void UpdatePSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_ps_p, 0, nullptr, &cbuffer_ps, 0, 0); }
 #pragma endregion
 
 }

@@ -134,9 +134,15 @@ namespace DirectXViewer
 	//  Must have both mesh and material to be used by scene
 	struct DXVOBJECT
 	{
-		XMMATRIX		modeling;
+		XMMATRIX		modeling = XMMatrixIdentity();
 		DXVMESH*		mesh_p = nullptr;
 		DXVMATERIAL*	material_p = nullptr;
+
+		~DXVOBJECT()
+		{
+			material_p = nullptr;
+			mesh_p = nullptr;
+		}
 	};
 
 	// Vertex shader constant buffer data container
@@ -150,10 +156,10 @@ namespace DirectXViewer
 	// Pixel shader constant buffer data container
 	struct DXVCBUFFER_PS
 	{
-		XMFLOAT3 light_pos;
-		XMFLOAT3 light_color;
-		float light_power;
-		float surface_shininess;
+		XMFLOAT3	light_pos;
+		XMFLOAT3	light_color;
+		float		light_power;
+		float		surface_shininess;
 	};
 #pragma endregion
 
@@ -215,6 +221,9 @@ namespace DirectXViewer
 	// Sets the current D3D specular material
 	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p);
 
+	// Sets the current D3D normal map material
+	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p);
+
 
 	// Sets the current D3D vertex resources from a DXVMESH
 	void DXVSetMesh(DXVMESH* _mesh_p);
@@ -260,12 +269,15 @@ namespace DirectXViewer
 	void D3DDrawIndexed(uint32_t _numInds);
 #pragma endregion
 
-#pragma region Mesh/Material Functions
+#pragma region Mesh/Material/Object Functions
 	// Loads mesh data from file into a DXVMESHDATA
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp);
 
 	// Creates and stores a DXVMESH from a DXVMESHDATA
 	HRESULT DXVCreateMesh(const DXVMESHDATA* _meshdata_p, DXVMESH** _mesh_pp);
+
+	// Loads mesh data from file into a DXVMESHDATA and creates a DXVMESH from it
+	HRESULT DXVLoadAndCreateMesh(const char* _filepath, DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp);
 
 
 	// Loads material data from file into a DXVMATERIALDATA
@@ -275,6 +287,20 @@ namespace DirectXViewer
 
 	// Creates and stores a DXVMATERIAL from a DXVMATERIALDATA
 	HRESULT DXVCreateMaterial(const DXVMATERIALDATA* _matdata_p, DXVMATERIAL** _material_pp);
+
+	// Loads material data from file into a DXVMATERIALDATA	and creates a DXVMATERIAL from it
+	// NOTES:
+	//  Should only be used for .mat files with only one material in them
+	HRESULT DXVLoadAndCreateMaterial(const char* _filepath, DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp);
+
+
+	// Loads mesh and material data into a DXVMESHDATA and DXVMATERIALDATA,
+	// creates a DXVMESH and DXVMATERIAL from them, and stores them in the passed in DXVOBJECT
+	HRESULT DXVLoadAndCreateObject(
+		const char* _mesh_filepath, const char* _mat_filepath,
+		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
+		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
+		DXVOBJECT* _object_p);
 #pragma endregion
 
 #pragma region Scene Functions
