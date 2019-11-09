@@ -157,10 +157,9 @@ namespace DirectXViewer
 	// Pixel shader constant buffer data container
 	struct DXVCBUFFER_PS
 	{
-		XMFLOAT4	cam_pos;
 		XMFLOAT3	light_pos;
-		XMFLOAT3	light_color;
 		float		light_power;
+		XMFLOAT3	light_color;
 		float		surface_shininess;
 	};
 #pragma endregion

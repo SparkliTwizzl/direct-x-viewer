@@ -22,10 +22,11 @@ struct VSin
 struct VSout
 {
 	float4 pos : SV_POSITION;
-	float4 norm : NORMAL;
-	float4 color : COLOR;
-	float2 uv : TEXCOORD;
+	float4 norm : NORMAL0;
+	float4 color : COLOR0;
+	float2 uv : TEXCOORD0;
 	float4 world_pos : WORLD_POS;
+	float4 cam_pos : CAM_POS;
 };
 
 
@@ -43,6 +44,11 @@ VSout main(VSin input)
 	output.color = input.color;
 
 	output.uv = input.uv;
+
+	output.cam_pos.x = -dot(view[3], view[0]);
+	output.cam_pos.y = -dot(view[3], view[1]);
+	output.cam_pos.z = -dot(view[3], view[2]);
+	output.cam_pos.w = 1.0f;
 
 	return output;
 }

@@ -13,7 +13,7 @@ namespace DXVInterface
 	uint32_t offsets[] = { 0 };
 
 	// TODO: Add variables here
-	float clearToColor[] = COLOR_GREY_DARK;
+	float clearToColor[] = GREY_DARK_RGBA_FLOAT32;
 
 	const char* testmesh_filename = "assets/Idle.mesh";
 	const char* testmat_filename = "assets/Idle.mat";

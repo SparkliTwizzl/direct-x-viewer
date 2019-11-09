@@ -57,12 +57,12 @@ namespace DirectXViewer
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
 
-	float							clearToColor[4] = COLOR_BLACK;
+	float							clearToColor[4] = BLACK_RGBA_FLOAT32;
 
-	XMVECTOR						light_pos = { 0.0f, 5.0f, 5.0f };
-	XMFLOAT4						light_color = COLOR_WHITE;
-	float							light_power = 100.0f;
-	float							light_rotationSpeed = 1.0f;
+	XMFLOAT3						light_pos = { 0.0f, 5.0f, 5.0f };
+	XMFLOAT3						light_color = WHITE_RGB_FLOAT32;
+	float							light_power = 10.0f;
+	float							light_rotationSpeed = 2.0f;
 
 	float							surface_shininess = 10.0f;
 
@@ -349,15 +349,10 @@ namespace DirectXViewer
 	void SetDefaultProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
 	void SetCurrentWorldMatrix(XMMATRIX _m)
 	{
-		SetWorldITMatrix(_m);
 		cbuffer_vs.world = _m;
+		SetWorldITMatrix(_m);
 	}
-	void SetCurrentViewMatrix(XMMATRIX _m)
-	{
-		cbuffer_vs.view = _m;
-		XMVECTOR cam_pos = XMMatrixInverse(nullptr, _m).r[3];
-		cbuffer_ps.cam_pos = { XMVectorGetX(cam_pos), XMVectorGetY(cam_pos), XMVectorGetZ(cam_pos), XMVectorGetW(cam_pos) };
-	}
+	void SetCurrentViewMatrix(XMMATRIX _m) { cbuffer_vs.view = _m; }
 	void SetCurrentProjectionMatrix(XMMATRIX _m) { cbuffer_vs.projection = _m; }
 
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
@@ -455,7 +450,9 @@ namespace DirectXViewer
 
 
 		// orbit light around origin
-		//light_pos = (XMMatrixTranslationFromVector(light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
+		XMVECTOR t_light_pos = { light_pos.x, light_pos.y, light_pos.z };
+		t_light_pos = (XMMatrixTranslationFromVector(t_light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
+		light_pos = { XMVectorGetX(t_light_pos), XMVectorGetY(t_light_pos), XMVectorGetZ(t_light_pos) };
 
 
 		// read input and update camera
@@ -511,7 +508,7 @@ namespace DirectXViewer
 
 		// set constant buffers
 		deviceContext_p->VSSetConstantBuffers(0, 1, &cbuffer_d3d_vs_p);
-		deviceContext_p->VSSetConstantBuffers(1, 1, &cbuffer_d3d_ps_p);
+		deviceContext_p->PSSetConstantBuffers(1, 1, &cbuffer_d3d_ps_p);
 
 		// set vertex shader constant buffer values
 		SetCurrentWorldMatrix(GetDefaultWorldMatrix());
@@ -520,11 +517,17 @@ namespace DirectXViewer
 		UpdateVSConstantBuffer();
 
 		// set pixel shader constant buffer values
-		cbuffer_ps.light_color = { light_color.x, light_color.y, light_color.z };
-		cbuffer_ps.light_pos = XMFLOAT3(XMVectorGetX(light_pos), XMVectorGetY(light_pos), XMVectorGetZ(light_pos));
+		cbuffer_ps.light_pos = light_pos;
 		cbuffer_ps.light_power = light_power;
+		cbuffer_ps.light_color = light_color;
 		cbuffer_ps.surface_shininess = surface_shininess;
 		UpdatePSConstantBuffer();
+
+		//cbuffer_ps.light_pos = { 0, 10, 0 };
+		//cbuffer_ps.light_power = 1.0f;
+		//cbuffer_ps.light_color = { 1, 1, 1 };
+		//cbuffer_ps.surface_shininess = 1.0f;
+		//deviceContext_p->UpdateSubresource(cbuffer_d3d_ps_p, 0, nullptr, &cbuffer_ps, 0, 0);
 
 		// set shaders
 		deviceContext_p->VSSetShader(shader_vertex_p, 0, 0);

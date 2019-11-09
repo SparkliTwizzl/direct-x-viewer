@@ -11,10 +11,9 @@ SamplerState sampler_linear : register(s0);
 
 cbuffer ConstantBuffer : register(b1)
 {
-    float4 cam_pos;
     float3 light_pos;
-    float3 light_color;
     float light_power;
+    float3 light_color;
     float surface_shininess;
 };
 
@@ -22,10 +21,11 @@ cbuffer ConstantBuffer : register(b1)
 struct VSout
 {
     float4 pos : SV_POSITION;
-    float4 norm : NORMAL;
-    float4 color : COLOR;
-    float2 uv : TEXCOORD;
+    float4 norm : NORMAL0;
+    float4 color : COLOR0;
+    float2 uv : TEXCOORD0;
     float4 world_pos : WORLD_POS;
+	float4 cam_pos : CAM_POS;
 };
 
 #define PSin VSout
@@ -43,59 +43,42 @@ PSout main(PSin input)
 {
     PSout output;
 
-    // sample material colors
-    float4 mat_diffuse = tex_diffuse.Sample(sampler_linear, input.uv);//+
-    float4 mat_emissive = tex_emissive.Sample(sampler_linear, input.uv);//+
-    float4 mat_specular = tex_specular.Sample(sampler_linear, input.uv);//+
-    float4 mat_normalmap = tex_normalmap.Sample(sampler_linear, input.uv);//+
+    float4 mat_diffuse = tex_diffuse.Sample(sampler_linear, input.uv);
+    float4 mat_emissive = tex_emissive.Sample(sampler_linear, input.uv);
+    float4 mat_specular = tex_specular.Sample(sampler_linear, input.uv);
+    float4 mat_normalmap = tex_normalmap.Sample(sampler_linear, input.uv);
+
+    //float3 norm = normalize(input.norm.xyz); // from vertex
+	//float3 norm = normalize(float3(2.0f * (mat_normalmap.x - 0.5f), 2.0f * (mat_normalmap.y - 0.5f), 2.0f * (mat_normalmap.z - 0.5f))); // from normal map
+	float3 norm = normalize(input.norm.xyz + float3(2.0f * (mat_normalmap.x - 0.5f), 2.0f * (mat_normalmap.y - 0.5f), 2.0f * (mat_normalmap.z - 0.5f))); // vertex + normalmap
+
+    float3 light_dir = light_pos - input.world_pos.xyz; // vector from pixel to light (not normalized)
+	float sq_dist_light = dot(light_dir, light_dir); // squared distance from pixel to light (used for attenuation)
+	light_dir = normalize(light_dir);
 
 
-    // normalize pixel normal vector
-    float3 norm = normalize(input.norm.xyz);//+
+    // get vector from pixel to camera
+    float3 view_dir = normalize(input.cam_pos.xyz - input.world_pos.xyz);
 
 
-    // get vector from pixel to light (NOT NORMALIZED)
-    float3 light_dir = light_pos - input.world_pos.xyz;//+
+    float3 half_angle_vec = normalize(light_dir + view_dir);
+    float NdotL = dot(norm, light_dir);
+    float NdotH = dot(norm, half_angle_vec);
 
-    // normalize light direction
+	float intensity_light = light_power / sq_dist_light;
+	float intensity_diffuse = saturate(NdotL);
+    float intensity_specular = pow(saturate(NdotH), surface_shininess);
 
+	float4 color_light = float4(light_color, 0.0f) * intensity_light;
+    float4 color_ambient = ambient_light * mat_diffuse;
+    float4 color_diffuse = (mat_diffuse * intensity_diffuse) * color_light;
+    float4 color_emissive = mat_emissive;
+    float4 color_specular = (mat_specular * intensity_specular) * color_light;
 
-    // get vector from pixel to camera (NOT NORMALIZED)
-    float3 view_dir = cam_pos.xyz - input.world_pos.xyz;//+
+	color_diffuse.xyz = saturate(color_diffuse.xyz - color_specular.xyz);
 
-    // normalize view direction
+	float4 color_final = color_ambient + color_diffuse + color_emissive + color_specular;
 
-
-    // calculate half-angle vector
-    float3 half_vec = normalize(light_dir + view_dir);//+
-
-
-    // calculate N dot L
-    float3 NdotL = dot(norm, light_dir);//+
-
-    // calculate N dot H
-    float3 NdotH = dot(norm, half_vec);//+
-
-
-    // calculate light intensities
-    float diffuse_intensity = saturate(NdotL);//+
-    float specular_intensity = pow(saturate(NdotH), surface_shininess);
-
-
-    // calculate light colors
-    float4 ambient = ambient_light * mat_diffuse;//+
-    float4 diffuse = mat_diffuse * diffuse_intensity;
-    float4 emissive = mat_emissive;//+
-    float4 specular = mat_specular * specular_intensity;
-    float4 normalmap = mat_normalmap;
-
-
-    float4 white = { 1, 1, 1, 0 };
-
-    // get final color
-    float4 color = ambient + emissive;
-    color = white * specular_intensity;
-
-    output.color = color;
+    output.color = color_final;
     return output;
 }
