@@ -15,14 +15,18 @@ namespace DXVInterface
 	// TODO: Add variables here
 	float clearToColor[] = GREY_DARK_RGBA_FLOAT32;
 
-	const char* testmesh_filename = "assets/Idle.mesh";
-	const char* testmat_filename = "assets/Idle.mat";
+	const char* testmesh_filename = "assets/Run.mesh";
+	const char* testmat_filename = "assets/Run.mat";
+	const char* testanim_filename = "assets/Run.anim";
 
 	DirectXViewer::DXVMESHDATA*			testmeshdata_p = nullptr;
 	DirectXViewer::DXVMESH*				testmesh_p = nullptr;
 
 	DirectXViewer::DXVMATERIALDATA*		testmatdata_p = nullptr;
 	DirectXViewer::DXVMATERIAL*			testmat_p = nullptr;
+
+	DirectXViewer::DXVANIMATIONDATA*	testanimdata_p = nullptr;
+	DirectXViewer::DXVANIMATION*		testanim_p = nullptr;
 
 	DirectXViewer::DXVOBJECT			testobj;
 #pragma endregion
@@ -56,6 +60,8 @@ namespace DXVInterface
 	}
 	void ManualCleanup()
 	{
+		delete testanim_p;
+		delete testanimdata_p;
 		delete testmat_p;
 		delete testmatdata_p;
 		delete testmesh_p;

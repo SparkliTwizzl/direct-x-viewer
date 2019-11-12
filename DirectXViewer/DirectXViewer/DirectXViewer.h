@@ -1,7 +1,5 @@
 #pragma once
 
-#include "debug.h"
-
 #include <Windows.h>
 #include <array>
 #include <cstdint>
@@ -11,6 +9,7 @@
 #include <DirectXMath.h>
 
 #include "colors.h"
+#include "debug.h"
 
 
 using namespace DirectX;
@@ -127,6 +126,18 @@ namespace DirectXViewer
 		const COMPONENT operator[](int i) const { return components[i]; }
 
 		COMPONENT components[ComponentType_e::Count];
+	};
+
+	// DXV animation data container
+	struct DXVANIMATIONDATA
+	{
+
+	};
+
+	// DXV rendering animation
+	struct DXVANIMATION
+	{
+
 	};
 
 	// DXV rendering object

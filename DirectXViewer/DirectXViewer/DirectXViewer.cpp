@@ -4,10 +4,10 @@
 
 #include"WICTextureLoader.h"
 
-#include "DirectXViewer.h"
-
 #include "vertexshader_default.csh"
 #include "pixelshader_default.csh"
+
+#include "DirectXViewer.h"
 
 
 namespace DirectXViewer
