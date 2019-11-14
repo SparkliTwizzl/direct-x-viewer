@@ -9,25 +9,35 @@ namespace DXVInterface
 	IDXGISwapChain*						swapChain_p = nullptr;
 
 	// Needed for manual raw D3D drawing
-	uint32_t strides[] = { sizeof(DirectXViewer::DXVVERTEX) };
-	uint32_t offsets[] = { 0 };
+	uint32_t							strides[] = { sizeof(DirectXViewer::DXVVERTEX) };
+	uint32_t							offsets[] = { 0 };
 
 	// TODO: Add variables here
-	XMFLOAT4 clearToColor = GREY_DARK_RGBA_FLOAT32;
+	XMFLOAT4							clearColor = GREY_DARK_RGBA_FLOAT32;
 
-	const char* testmesh_filename = "assets/Run.mesh";
-	const char* testmat_filename = "assets/Run.mat";
-	const char* testanim_filename = "assets/Run.anim";
-
+	const char*							testmesh_filename = "assets/Run.mesh";
 	DirectXViewer::DXVMESHDATA*			testmeshdata_p = nullptr;
 	DirectXViewer::DXVMESH*				testmesh_p = nullptr;
 
+	const char*							testmat_filename = "assets/Run.mat";
 	DirectXViewer::DXVMATERIALDATA*		testmatdata_p = nullptr;
 	DirectXViewer::DXVMATERIAL*			testmat_p = nullptr;
 
+	const char*							testanim_filename = "assets/Run.anim";
 	DirectXViewer::DXVANIMATIONDATA*	testanimdata_p = nullptr;
 	DirectXViewer::DXVANIMATION*		testanim_p = nullptr;
 
+	DirectXViewer::DXVOBJECTDATA		testobjdata = {
+		testmesh_filename,
+		testmat_filename,
+		testanim_filename,
+		&testmeshdata_p,
+		&testmesh_p,
+		&testmatdata_p,
+		&testmat_p,
+		&testanimdata_p,
+		&testanim_p
+	};
 	DirectXViewer::DXVOBJECT			testobj;
 #pragma endregion
 
@@ -37,14 +47,15 @@ namespace DXVInterface
 	{
 		HRESULT hr;
 		
-		DirectXViewer::D3DSetClearToColor(clearToColor);
+		DirectXViewer::D3DSetClearToColor(clearColor);
 
 		XMVECTOR eye = { 0, 7, 7 };
 		XMVECTOR at = { 0, 3, 0 };
 		XMVECTOR up = { 0, 1, 0 };
 		DirectXViewer::SetDefaultViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
-		hr = DirectXViewer::DXVLoadAndCreateObject(testmesh_filename, testmat_filename, &testmeshdata_p, &testmesh_p, &testmatdata_p, &testmat_p, &testobj);
+		//hr = DirectXViewer::DXVLoadAndCreateObject(testmesh_filename, testmat_filename, testanim_filename, &testmeshdata_p, &testmesh_p, &testmatdata_p, &testmat_p, &testanimdata_p, &testanim_p, &testobj);
+		hr = DirectXViewer::DXVLoadAndCreateObject(testobjdata, &testobj);
 		if (FAILED(hr)) return hr;
 
 		DirectXViewer::AddObjectToScene(&testobj);

@@ -160,6 +160,33 @@ namespace DirectXViewer
 
 	};
 
+	// DXV object data container
+	struct DXVOBJECTDATA
+	{
+		const char*			mesh_filepath;
+		const char*			material_filepath;
+		const char*			animation_filepath;
+
+		DXVMESHDATA**		meshdata_pp = nullptr;
+		DXVMESH**			mesh_pp = nullptr;
+
+		DXVMATERIALDATA**	materialdata_pp = nullptr;
+		DXVMATERIAL**		material_pp = nullptr;
+
+		DXVANIMATIONDATA**	animationdata_pp = nullptr;
+		DXVANIMATION**		animation_pp = nullptr;
+
+		~DXVOBJECTDATA()
+		{
+			meshdata_pp = nullptr;
+			mesh_pp = nullptr;
+			materialdata_pp = nullptr;
+			material_pp = nullptr;
+			animationdata_pp = nullptr;
+			animation_pp = nullptr;
+		}
+	};
+
 	// DXV rendering object
 	// NOTES:
 	//  Must have both mesh and material to be used by scene
@@ -168,11 +195,13 @@ namespace DirectXViewer
 		XMMATRIX		model_matrix = XMMatrixIdentity();
 		DXVMESH*		mesh_p = nullptr;
 		DXVMATERIAL*	material_p = nullptr;
+		DXVANIMATION*	animation_p = nullptr;
 
 		~DXVOBJECT()
 		{
 			material_p = nullptr;
 			mesh_p = nullptr;
+			animation_p = nullptr;
 		}
 	};
 
@@ -331,13 +360,33 @@ namespace DirectXViewer
 	HRESULT DXVLoadAndCreateMaterial(const char* _filepath, DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp);
 
 
-	// Loads mesh and material data into a DXVMESHDATA and DXVMATERIALDATA,
-	// creates a DXVMESH and DXVMATERIAL from them, and stores them in the passed in DXVOBJECT
+	// Loads animation data from file into a DXVANIMATIONDATA
+	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp);
+
+	// Creats and stores a DXVANIMATION from a DXVANIMATIONDATA
+	HRESULT DXVCreateAnimation(const DXVANIMATIONDATA* _animdata_p, DXVANIMATION** _animation_pp);
+
+	// Loads animation data from file into a DXVANIMATIONDATA and creates a DXVANIMATION from it
+	HRESULT DXVLoadAndCreateAnimation(const char* _filepath, DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp);
+
+
+	// Loads mesh, material, and animation data, creats a DXVMESDH, DXVMATERIAL, and DXVANIMATION,
+	// and stores them in the passed in DXVOBJECT
 	HRESULT DXVLoadAndCreateObject(
-		const char* _mesh_filepath, const char* _mat_filepath,
+		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
 		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
+		DXVANIMATIONDATA**	_animdata_pp, DXVANIMATION** _animation_pp,
 		DXVOBJECT* _object_p);
+
+	// Loads mesh, material, and animation data, creats a DXVMESDH, DXVMATERIAL, and DXVANIMATION,
+	// and stores them in the passed in DXVOBJECT
+	HRESULT inline DXVLoadAndCreateObject(DXVOBJECTDATA _objdata, DXVOBJECT* _object_p)
+	{
+		return DXVLoadAndCreateObject(_objdata.mesh_filepath, _objdata.material_filepath, _objdata.animation_filepath,
+			_objdata.meshdata_pp, _objdata.mesh_pp, _objdata.materialdata_pp, _objdata.material_pp,
+			_objdata.animationdata_pp, _objdata.animation_pp, _object_p);
+	}
 #pragma endregion
 
 #pragma region Scene Functions

@@ -20,8 +20,6 @@ struct PSout
 };
 
 
-static const float4 ambient_light = { 0.25f, 0.25f, 0.25f, 0.0f };
-
 PSout main(PSin input)
 {
     PSout output;

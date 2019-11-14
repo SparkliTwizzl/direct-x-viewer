@@ -61,7 +61,7 @@ namespace DirectXViewer
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
 
-	float							clearToColor[4] = BLACK_RGBA_FLOAT32;
+	float							clearColor[4] = BLACK_RGBA_FLOAT32;
 
 	XMFLOAT3						light_pos = { 0.0f, 5.0f, 5.0f };
 	XMFLOAT3						light_color = WHITE_RGB_FLOAT32;
@@ -416,10 +416,10 @@ namespace DirectXViewer
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(3, 1, &_material_p); }
 	void D3DSetClearToColor(XMFLOAT4 _color)
 	{
-		clearToColor[0] = _color.x;
-		clearToColor[1] = _color.y;
-		clearToColor[2] = _color.z;
-		clearToColor[3] = _color.w;
+		clearColor[0] = _color.x;
+		clearColor[1] = _color.y;
+		clearColor[2] = _color.z;
+		clearColor[3] = _color.w;
 	}
 
 	void DXVSetMesh(DXVMESH* _mesh_p)
@@ -549,7 +549,7 @@ namespace DirectXViewer
 
 		// set and clear render target and depth stencil
 		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
-		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearToColor);
+		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearColor);
 		deviceContext_p->ClearDepthStencilView(depthStencilView_p, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		// set constant buffers
@@ -615,7 +615,7 @@ namespace DirectXViewer
 	void D3DDrawIndexed(uint32_t _numInds) { deviceContext_p->DrawIndexed(_numInds, 0, 0); }
 #pragma endregion
 
-#pragma region Mesh/Material/Object Functions
+#pragma region Mesh/Material/Animation/Object Functions
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp)
 	{
 		HRESULT hr;
@@ -649,6 +649,7 @@ namespace DirectXViewer
 		{
 			DXVMESH* mesh_p = new DXVMESH;
 
+			// copy data
 			mesh_p->vertexCount = _meshdata_p->vertexCount;
 			mesh_p->indexCount = _meshdata_p->indexCount;
 
@@ -657,6 +658,7 @@ namespace DirectXViewer
 
 			hr = D3DCreateIndexBuffer(mesh_p->indexCount, _meshdata_p->indices, &mesh_p->indexBuffer_p);
 			if (FAILED(hr)) return hr;
+
 
 			*_mesh_pp = mesh_p;
 		}
@@ -670,8 +672,7 @@ namespace DirectXViewer
 		hr = DXVLoadMeshData(_filepath, _meshdata_pp);
 		if (FAILED(hr)) return hr;
 
-		hr = DXVCreateMesh(*_meshdata_pp, _mesh_pp);
-		return hr;
+		return DXVCreateMesh(*_meshdata_pp, _mesh_pp);
 	}
 
 	HRESULT DXVLoadMaterialData(const char* _filepath, DXVMATERIALDATA** _matdata_pp)
@@ -750,6 +751,7 @@ namespace DirectXViewer
 
 		DXVMATERIAL* material_p = new DXVMATERIAL;
 
+		// copy data
 		for (uint32_t c = 0; c < DXVMATERIAL::ComponentType_e::Count; c++)
 		{
 			material_p->components[c].value = _matdata_p->components[c].value;
@@ -784,14 +786,60 @@ namespace DirectXViewer
 		hr = DXVLoadMaterialData(_filepath, _matdata_pp);
 		if (FAILED(hr)) return hr;
 
-		hr = DXVCreateMaterial(*_matdata_pp, _material_pp);
+		return DXVCreateMaterial(*_matdata_pp, _material_pp);
+	}
+
+	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp)
+	{
+		HRESULT hr;
+		std::fstream fin;
+
+		hr = _OpenFile(_filepath, &fin);
+		if (FAILED(hr)) return hr;
+
+		DXVANIMATIONDATA* animdata_p = new DXVANIMATIONDATA;
+
+		// load data from file
+		
+
+		// store loaded data
+		*_animdata_pp = animdata_p;
+
 		return hr;
+	}
+	HRESULT DXVCreateAnimation(const DXVANIMATIONDATA* _animdata_p, DXVANIMATION** _animation_pp)
+	{
+		HRESULT hr = E_INVALIDARG;
+
+		if (_animdata_p == nullptr)
+			errormsg = "Uninitialized DXVANIMATIONDATA* passed to DXVCreateAnimation";
+		else
+		{
+			DXVANIMATION* animation_p = new DXVANIMATION;
+
+			// copy data
+
+
+			*_animation_pp = animation_p;
+		}
+
+		return hr;
+	}
+	HRESULT DXVLoadAndCreateAnimation(const char* _filepath, DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp)
+	{
+		HRESULT hr;
+
+		hr = DXVLoadAnimationData(_filepath, _animdata_pp);
+		if (FAILED(hr)) return hr;
+
+		return DXVCreateAnimation(*_animdata_pp, _animation_pp);
 	}
 
 	HRESULT DXVLoadAndCreateObject(
-		const char* _mesh_filepath, const char* _mat_filepath,
+		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
 		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
+		DXVANIMATIONDATA**	_animdata_pp, DXVANIMATION** _animation_pp,
 		DXVOBJECT* _object_p)
 	{
 		HRESULT hr;
@@ -804,6 +852,7 @@ namespace DirectXViewer
 
 		_object_p->mesh_p = *_mesh_pp;
 		_object_p->material_p = *_material_pp;
+		_object_p->animation_p = *_animation_pp;
 
 		return hr;
 	}
