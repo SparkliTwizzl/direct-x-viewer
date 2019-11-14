@@ -24,7 +24,13 @@ namespace DXVInterface
 	DirectXViewer::DXVMATERIAL*			testmat_p = nullptr;
 
 	const char*							testanim_filename = "assets/Run.anim";
-	DirectXViewer::DXVANIMATIONDATA*	testanimdata_p = nullptr;
+	/*
+	28 joints
+	0.708333 sec long
+	1800 B frames
+	20 frames
+	37920 B file
+	*/
 	DirectXViewer::DXVANIMATION*		testanim_p = nullptr;
 
 	DirectXViewer::DXVOBJECTDATA		testobjdata = {
@@ -35,7 +41,6 @@ namespace DXVInterface
 		&testmesh_p,
 		&testmatdata_p,
 		&testmat_p,
-		&testanimdata_p,
 		&testanim_p
 	};
 	DirectXViewer::DXVOBJECT			testobj;
@@ -47,14 +52,13 @@ namespace DXVInterface
 	{
 		HRESULT hr;
 		
-		DirectXViewer::D3DSetClearToColor(clearColor);
+		DirectXViewer::D3DSetClearColor(clearColor);
 
 		XMVECTOR eye = { 0, 7, 7 };
 		XMVECTOR at = { 0, 3, 0 };
 		XMVECTOR up = { 0, 1, 0 };
 		DirectXViewer::SetDefaultViewMatrix(XMMatrixLookAtLH(eye, at, up));
 
-		//hr = DirectXViewer::DXVLoadAndCreateObject(testmesh_filename, testmat_filename, testanim_filename, &testmeshdata_p, &testmesh_p, &testmatdata_p, &testmat_p, &testanimdata_p, &testanim_p, &testobj);
 		hr = DirectXViewer::DXVLoadAndCreateObject(testobjdata, &testobj);
 		if (FAILED(hr)) return hr;
 
@@ -72,7 +76,6 @@ namespace DXVInterface
 	void ManualCleanup()
 	{
 		delete testanim_p;
-		delete testanimdata_p;
 		delete testmat_p;
 		delete testmatdata_p;
 		delete testmesh_p;

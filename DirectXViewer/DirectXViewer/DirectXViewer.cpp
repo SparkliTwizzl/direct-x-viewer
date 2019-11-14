@@ -106,10 +106,15 @@ namespace DirectXViewer
 
 
 #pragma region Private Helper Functions
+	// converters
+
+	XMFLOAT3 inline XMVectorToXMFloat3(XMVECTOR _v) { return { XMVectorGetX(_v), XMVectorGetY(_v), XMVectorGetZ(_v) }; }
+
+
 	// setters
 
 	// sets the inverse-transpose world matrix (used for normal vectors in shaders)
-	void _SetWorldITMatrix(XMMATRIX _m) { cbuffer_vs.worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
+	void inline _SetWorldITMatrix(XMMATRIX _m) { cbuffer_vs.worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
 
 
 	// init
@@ -414,7 +419,7 @@ namespace DirectXViewer
 	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
 	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(3, 1, &_material_p); }
-	void D3DSetClearToColor(XMFLOAT4 _color)
+	void D3DSetClearColor(XMFLOAT4 _color)
 	{
 		clearColor[0] = _color.x;
 		clearColor[1] = _color.y;
@@ -789,7 +794,7 @@ namespace DirectXViewer
 		return DXVCreateMaterial(*_matdata_pp, _material_pp);
 	}
 
-	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp)
+	HRESULT DXVLoadAnimation(const char* _filepath, DXVANIMATION** _animation_pp)
 	{
 		HRESULT hr;
 		std::fstream fin;
@@ -797,49 +802,49 @@ namespace DirectXViewer
 		hr = _OpenFile(_filepath, &fin);
 		if (FAILED(hr)) return hr;
 
-		DXVANIMATIONDATA* animdata_p = new DXVANIMATIONDATA;
+		DXVANIMATION* animation_p = new DXVANIMATION;
 
 		// load data from file
-		
+		uint32_t numJoints = 0;
+		uint32_t numFrames = 0;
 
-		// store loaded data
-		*_animdata_pp = animdata_p;
+		// write bind pose to file with format:
+		//   uint32_t : number of joints
+		fin.read((char*)&numJoints, sizeof(numJoints));
+		animation_p->bind_pose.joint_count = numJoints;
+		//   { float[16], int }[numJoints] : joint data
+		animation_p->bind_pose.joints = new DXVANIMATION::JOINT[numJoints];
+		fin.read((char*)&animation_p->bind_pose.joints[0], numJoints * sizeof(DXVANIMATION::JOINT));
 
-		return hr;
-	}
-	HRESULT DXVCreateAnimation(const DXVANIMATIONDATA* _animdata_p, DXVANIMATION** _animation_pp)
-	{
-		HRESULT hr = E_INVALIDARG;
-
-		if (_animdata_p == nullptr)
-			errormsg = "Uninitialized DXVANIMATIONDATA* passed to DXVCreateAnimation";
-		else
+		// write animation clip to file with format:
+		//   double	: animation duration in seconds
+		fin.read((char*)&animation_p->duration, sizeof(animation_p->duration));
+		//   uint32_t : byte length of each frame
+		fin.read((char*)&animation_p->frame_byte_length, sizeof(animation_p->frame_byte_length));
+		//   uint32_t : number of frames
+		fin.read((char*)&numFrames, sizeof(numFrames));
+		animation_p->frame_count = numFrames;
+		//   { double, float[16][numJoints] }[numFrames] : frame data
+		animation_p->keyframes = new DXVANIMATION::FRAME[numFrames];
+		for (uint32_t i = 0; i < numFrames; i++)
 		{
-			DXVANIMATION* animation_p = new DXVANIMATION;
-
-			// copy data
-
-
-			*_animation_pp = animation_p;
+			animation_p->keyframes[i].transforms = new float4x4[numJoints];
+			fin.read((char*)&animation_p->keyframes[i].time, sizeof(DXVANIMATION::FRAME::time));
+			fin.read((char*)&animation_p->keyframes[i].transforms[0], animation_p->frame_byte_length - sizeof(DXVANIMATION::FRAME::time));
 		}
 
+
+		// store loaded data
+		*_animation_pp = animation_p;
+
 		return hr;
-	}
-	HRESULT DXVLoadAndCreateAnimation(const char* _filepath, DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp)
-	{
-		HRESULT hr;
-
-		hr = DXVLoadAnimationData(_filepath, _animdata_pp);
-		if (FAILED(hr)) return hr;
-
-		return DXVCreateAnimation(*_animdata_pp, _animation_pp);
 	}
 
 	HRESULT DXVLoadAndCreateObject(
 		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
 		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
-		DXVANIMATIONDATA**	_animdata_pp, DXVANIMATION** _animation_pp,
+		DXVANIMATION** _animation_pp,
 		DXVOBJECT* _object_p)
 	{
 		HRESULT hr;
@@ -848,6 +853,9 @@ namespace DirectXViewer
 		if (FAILED(hr)) return hr;
 
 		hr = DXVLoadAndCreateMaterial(_mat_filepath, _matdata_pp, _material_pp);
+		if (FAILED(hr)) return hr;
+
+		hr = DXVLoadAnimation(_anim_filepath, _animation_pp);
 		if (FAILED(hr)) return hr;
 
 		_object_p->mesh_p = *_mesh_pp;
@@ -956,6 +964,29 @@ namespace DirectXViewer
 
 	void UpdateVSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_vs_p, 0, nullptr, &cbuffer_vs, 0, 0); }
 	void UpdatePSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_ps_p, 0, nullptr, &cbuffer_ps, 0, 0); }
+#pragma endregion
+
+#pragma region Debug Functions
+	void debug_AddMatrixToDebugRenderer(XMMATRIX _m, float _scale, bool _showNegativeAxes)
+	{
+		XMVECTOR matPos_v = _m.r[3];
+		XMFLOAT3 matPos_f = XMVectorToXMFloat3(matPos_v);
+
+		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[0] * _scale), RED_RGBA_FLOAT32);
+		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[1] * _scale), GREEN_RGBA_FLOAT32);
+		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[2] * _scale), BLUE_RGBA_FLOAT32);
+
+		if (_showNegativeAxes)
+		{
+			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[0] * _scale), CYAN_RGBA_FLOAT32);
+			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[1] * _scale), MAGENTA_RGBA_FLOAT32);
+			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[2] * _scale), YELLOW_RGBA_FLOAT32);
+		}
+	}
+	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::FRAME* _frame_p, XMMATRIX _position)
+	{
+
+	}
 #pragma endregion
 
 

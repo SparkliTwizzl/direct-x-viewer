@@ -148,16 +148,48 @@ namespace DirectXViewer
 		COMPONENT components[ComponentType_e::Count];
 	};
 
-	// DXV animation data container
-	struct DXVANIMATIONDATA
-	{
-
-	};
-
-	// DXV rendering animation
+	// DXV animation
 	struct DXVANIMATION
 	{
+		struct JOINT
+		{
+			float4x4	global_transform = {};
+			int32_t		parent_index = -1;
+		};
 
+		struct BINDPOSE
+		{
+			uint32_t	joint_count = 0;
+			JOINT*		joints = nullptr;
+
+			~BINDPOSE()
+			{
+				delete[] joints;
+			}
+		};
+
+		struct FRAME
+		{
+			double		time = 0.0f;
+			float4x4*	transforms = nullptr;
+
+			~FRAME()
+			{
+				delete[] transforms;
+			}
+		};
+
+		double		duration = 0.0f;
+		double		playback_speed = 1.0f;
+		BINDPOSE	bind_pose;
+		uint32_t	frame_byte_length = 0;
+		uint32_t	frame_count = 0;
+		FRAME*		keyframes = nullptr;
+
+		~DXVANIMATION()
+		{
+			delete[] keyframes;
+		}
 	};
 
 	// DXV object data container
@@ -173,7 +205,6 @@ namespace DirectXViewer
 		DXVMATERIALDATA**	materialdata_pp = nullptr;
 		DXVMATERIAL**		material_pp = nullptr;
 
-		DXVANIMATIONDATA**	animationdata_pp = nullptr;
 		DXVANIMATION**		animation_pp = nullptr;
 
 		~DXVOBJECTDATA()
@@ -182,7 +213,6 @@ namespace DirectXViewer
 			mesh_pp = nullptr;
 			materialdata_pp = nullptr;
 			material_pp = nullptr;
-			animationdata_pp = nullptr;
 			animation_pp = nullptr;
 		}
 	};
@@ -288,7 +318,7 @@ namespace DirectXViewer
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p);
 
 	// Sets the color to clear the screen to
-	void D3DSetClearToColor(XMFLOAT4 _color);
+	void D3DSetClearColor(XMFLOAT4 _color);
 
 
 	// Sets the current D3D vertex resources from a DXVMESH
@@ -361,13 +391,7 @@ namespace DirectXViewer
 
 
 	// Loads animation data from file into a DXVANIMATIONDATA
-	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp);
-
-	// Creats and stores a DXVANIMATION from a DXVANIMATIONDATA
-	HRESULT DXVCreateAnimation(const DXVANIMATIONDATA* _animdata_p, DXVANIMATION** _animation_pp);
-
-	// Loads animation data from file into a DXVANIMATIONDATA and creates a DXVANIMATION from it
-	HRESULT DXVLoadAndCreateAnimation(const char* _filepath, DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp);
+	HRESULT DXVLoadAnimation(const char* _filepath, DXVANIMATION** _animation_pp);
 
 
 	// Loads mesh, material, and animation data, creats a DXVMESDH, DXVMATERIAL, and DXVANIMATION,
@@ -376,7 +400,7 @@ namespace DirectXViewer
 		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
 		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
-		DXVANIMATIONDATA**	_animdata_pp, DXVANIMATION** _animation_pp,
+		DXVANIMATION** _animation_pp,
 		DXVOBJECT* _object_p);
 
 	// Loads mesh, material, and animation data, creats a DXVMESDH, DXVMATERIAL, and DXVANIMATION,
@@ -385,7 +409,7 @@ namespace DirectXViewer
 	{
 		return DXVLoadAndCreateObject(_objdata.mesh_filepath, _objdata.material_filepath, _objdata.animation_filepath,
 			_objdata.meshdata_pp, _objdata.mesh_pp, _objdata.materialdata_pp, _objdata.material_pp,
-			_objdata.animationdata_pp, _objdata.animation_pp, _object_p);
+			_objdata.animation_pp, _object_p);
 	}
 #pragma endregion
 
@@ -440,6 +464,19 @@ namespace DirectXViewer
 
 	// Updates the pixel shader constant buffer subresource
 	void UpdatePSConstantBuffer();
+#pragma endregion
+
+#pragma region Debug Functions
+	// Adds a matrix's axes to the debug renderer
+	// NOTES:
+	//   Use _scale to change the length of the axes
+	//   Set _showNegativeAxes to true to draw negative axes in inverted colors
+	void debug_AddMatrixToDebugRenderer(XMMATRIX _m, float _scale = 1.0f, bool _showNegativeAxes = false);
+
+	// Adds an animation frame's bones and joints to the debug renderer
+	// NOTES:
+	//   Use _position matrix to set the position to render the skeleton at
+	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::FRAME* _frame_p, XMMATRIX _position = XMMatrixIdentity());
 #pragma endregion
 
 
