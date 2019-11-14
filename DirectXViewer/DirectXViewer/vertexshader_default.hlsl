@@ -39,7 +39,7 @@ VSout main(VSin input)
 	output.pos = mul(output.world_pos, view);
 	output.pos = mul(output.pos, projection);
 
-	output.norm = mul(float4(input.norm, 0.0f), world);
+	output.norm = mul(float4(input.norm, 0.0f), worldIT);
 
 	output.color = input.color;
 

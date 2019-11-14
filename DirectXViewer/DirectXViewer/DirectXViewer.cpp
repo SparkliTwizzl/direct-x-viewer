@@ -436,7 +436,7 @@ namespace DirectXViewer
 	}
 	void DXVSetObject(DXVOBJECT* _object_p)
 	{
-		SetCurrentWorldMatrix(_object_p->modeling);
+		SetCurrentWorldMatrix(_object_p->model_matrix);
 		DXVSetMesh(_object_p->mesh_p);
 		DXVSetMaterial(_object_p->material_p);
 

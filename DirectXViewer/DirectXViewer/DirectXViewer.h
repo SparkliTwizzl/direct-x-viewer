@@ -165,7 +165,7 @@ namespace DirectXViewer
 	//  Must have both mesh and material to be used by scene
 	struct DXVOBJECT
 	{
-		XMMATRIX		modeling = XMMatrixIdentity();
+		XMMATRIX		model_matrix = XMMatrixIdentity();
 		DXVMESH*		mesh_p = nullptr;
 		DXVMATERIAL*	material_p = nullptr;
 
