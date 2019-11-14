@@ -13,7 +13,7 @@ namespace DXVInterface
 	uint32_t offsets[] = { 0 };
 
 	// TODO: Add variables here
-	float clearToColor[] = GREY_DARK_RGBA_FLOAT32;
+	XMFLOAT4 clearToColor = GREY_DARK_RGBA_FLOAT32;
 
 	const char* testmesh_filename = "assets/Run.mesh";
 	const char* testmat_filename = "assets/Run.mat";
@@ -96,12 +96,13 @@ namespace DXVInterface
 		// TODO: Add update code here
 		ManualUpdate();
 
-		DirectXViewer::Draw(false); // If you are drawing manually, pass false to Draw() and uncomment Present()
-
 		// TODO: Add draw code here
 		ManualDraw();
 
-		DirectXViewer::Present(); // Uncomment this if you are drawing anything manually
+		uint32_t draw_mode = DirectXViewer::DRAW_MODE::DRAW_DEBUG;
+		DirectXViewer::Draw(draw_mode); // If you are drawing manually after this function, pass DRAW_MODE::NO_PRESENT to Draw() and uncomment Present()
+
+		//DirectXViewer::Present();
 	}
 	void Cleanup()
 	{

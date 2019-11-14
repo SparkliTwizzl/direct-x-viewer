@@ -8,6 +8,7 @@
 #pragma comment(lib, "d3d11.lib")
 #include <DirectXMath.h>
 
+#include "mathtypes.h"
 #include "colors.h"
 #include "debug.h"
 
@@ -21,8 +22,27 @@ namespace DirectXViewer
 	using filepath_t = std::array<char, 260>;
 
 #define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
-#pragma endregion
+#define DXV_PRIMITIVE_TOPOLOGY_DEFAULT D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+#define DXV_PRIMITIVE_TOPOLOGY_DEBUG D3D11_PRIMITIVE_TOPOLOGY_LINELIST
 
+
+	// Used to set behavior of DXV drawing
+	// VALUES :
+	//   DEFAULT - Draw objects in scene, do not draw debug lines, present
+	//   NO_PRESENT - Do not present to viewport after rendering
+	//   NO_SCENE_OBJECTS - Do not draw objects in scene automatically
+	//   DRAW_DEBUG - Draw debug lines
+	struct DRAW_MODE
+	{
+		enum
+		{
+			DEFAULT = 0x00000000
+			, NO_PRESENT = 0x00000001
+			, NO_SCENE_OBJECTS = 0x00000002
+			, DRAW_DEBUG = 0x00000004
+		};
+	};
+#pragma endregion
 
 #pragma region Structs
 	// DXV vertex data container
@@ -176,6 +196,7 @@ namespace DirectXViewer
 #pragma endregion
 
 
+
 #pragma region Getters
 	// Returns the default world matrix
 	XMMATRIX GetDefaultWorldMatrix();
@@ -238,7 +259,7 @@ namespace DirectXViewer
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p);
 
 	// Sets the color to clear the screen to
-	void D3DSetClearToColor(float _color[4]);
+	void D3DSetClearToColor(XMFLOAT4 _color);
 
 
 	// Sets the current D3D vertex resources from a DXVMESH
@@ -269,8 +290,8 @@ namespace DirectXViewer
 	// Handles drawing of active DXV resources
 	// Additional draws must be done manually after this function is called
 	// NOTES:
-	//  Pass false if you are manually drawing anything, then call Present() after manual draws
-	void Draw(bool _present = true);
+	//  Pass DRAW_MODE::NO_PRESENT if you are manually drawing anything, then call Present() after manual draws
+	void Draw(uint32_t _draw_mode = DRAW_MODE::DEFAULT);
 
 	// Presents the scene to the window
 	// NOTES:
@@ -371,5 +392,17 @@ namespace DirectXViewer
 	// Updates the pixel shader constant buffer subresource
 	void UpdatePSConstantBuffer();
 #pragma endregion
+
+
+	namespace DebugRenderer
+	{
+		void add_line(XMFLOAT3 _point_a, XMFLOAT3 _point_b, XMFLOAT4 _color_a, XMFLOAT4 _color_b);
+		inline void add_line(XMFLOAT3 _p, XMFLOAT3 _q, XMFLOAT4 _color) { add_line(_p, _q, _color, _color); }
+		void clear_lines();
+		const DXVVERTEX* get_line_verts();
+		size_t get_line_vert_count();
+		size_t get_line_vert_capacity();
+
+	}
 
 }

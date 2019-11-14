@@ -2,11 +2,8 @@
 
 struct float2
 {
-	union
-	{
-		float x;
-		float y;
-	};
+	float x;
+	float y;
 
 	inline static constexpr size_t size() { return 2; }
 
@@ -177,6 +174,70 @@ struct float4
 
 
 	inline bool operator==(float4 rhs) { return (x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w); }
+
+	inline friend float4 operator+(float4 lhs, float4 rhs) { return { lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w }; }
+	inline friend float4 operator-(float4 lhs, float4 rhs) { return { lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w }; }
+	inline friend float4 operator*(float4 lhs, float4 rhs) { return { lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w }; }
+	inline friend float4 operator/(float4 lhs, float4 rhs) { return { lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w }; }
+	inline friend float4 operator*(float4 lhs, float rhs) { return { lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs }; }
+	inline friend float4 operator/(float4 lhs, float rhs) { return { lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs }; }
+
+	inline friend float dot(float4 lhs, float4 rhs) { return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w; }
+
+	inline float4& operator+=(float4 rhs)
+	{
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+		w += rhs.w;
+
+		return *this;
+	}
+	inline float4& operator-=(float4 rhs)
+	{
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+		w -= rhs.w;
+
+		return *this;
+	}
+	inline float4& operator*=(float4 rhs)
+	{
+		x *= rhs.x;
+		y *= rhs.y;
+		z *= rhs.z;
+		w *= rhs.w;
+
+		return *this;
+	}
+	inline float4& operator/=(float4 rhs)
+	{
+		x /= rhs.x;
+		y /= rhs.y;
+		z /= rhs.z;
+		w /= rhs.w;
+
+		return *this;
+	}
+	inline float4& operator*=(float rhs)
+	{
+		x *= rhs;
+		y *= rhs;
+		z *= rhs;
+		w *= rhs;
+
+		return *this;
+	}
+	inline float4& operator/=(float rhs)
+	{
+		x /= rhs;
+		y /= rhs;
+		z /= rhs;
+		w /= rhs;
+
+		return *this;
+	}
 };
 
 struct alignas(8) float2_a : float2 {};

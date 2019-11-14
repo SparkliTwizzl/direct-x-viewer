@@ -6,6 +6,7 @@
 
 #include "vertexshader_default.csh"
 #include "pixelshader_default.csh"
+#include "pixelshader_debug.csh"
 
 #include "DirectXViewer.h"
 
@@ -35,14 +36,17 @@ namespace DirectXViewer
 
 	ID3D11SamplerState*				samplerLinear_p = nullptr;
 
+	ID3D11Buffer*					vbuffer_debug_p = nullptr;
+
 	DXVCBUFFER_VS					cbuffer_vs;
 	DXVCBUFFER_PS					cbuffer_ps;
 
 	ID3D11Buffer*					cbuffer_d3d_vs_p = nullptr;
 	ID3D11Buffer*					cbuffer_d3d_ps_p = nullptr;
 
-	ID3D11VertexShader*				shader_vertex_p = nullptr;
-	ID3D11PixelShader*				shader_pixel_p = nullptr;
+	ID3D11VertexShader*				shader_vertex_default_p = nullptr;
+	ID3D11PixelShader*				shader_pixel_default_p = nullptr;
+	ID3D11PixelShader*				shader_pixel_debug_p = nullptr;
 
 	D3D11_VIEWPORT					viewport;
 
@@ -105,19 +109,13 @@ namespace DirectXViewer
 	// setters
 
 	// sets the inverse-transpose world matrix (used for normal vectors in shaders)
-	void SetWorldITMatrix(XMMATRIX _m) { cbuffer_vs.worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
+	void _SetWorldITMatrix(XMMATRIX _m) { cbuffer_vs.worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
 
 
 	// init
 
-	HRESULT	InitD3DResources()
+	HRESULT _CreateDeviceAndSwapChain()
 	{
-		HRESULT hr;
-
-		errormsg = "D3D initialization failed";
-
-
-		// create device and swap chain
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
 		swapChainDesc.BufferCount = 1; // number of buffers in swap chain
 		swapChainDesc.OutputWindow = *hWnd_p;
@@ -132,11 +130,13 @@ namespace DirectXViewer
 #ifdef _DEBUG
 		createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-		hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL,
+		return D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL,
 			createDeviceFlags, &featureLevel, 1, D3D11_SDK_VERSION,
 			&swapChainDesc, &swapChain_p, &device_p, 0, &deviceContext_p);
-		if (FAILED(hr)) return hr;
-
+	}
+	HRESULT _CreateRenderTargetView()
+	{
+		HRESULT hr;
 
 		// get back buffer from swap chain and create render target view
 		ID3D11Resource* backbuffer_p = nullptr;
@@ -148,12 +148,10 @@ namespace DirectXViewer
 
 		backbuffer_p->Release();
 
-
-		// create depth stencil
-		hr = D3DCreateDepthStencilView(windowWidth, windowHeight, &depthStencil_p, &depthStencilView_p);
-
-
-		// create and set input layout
+		return hr;
+	}
+	HRESULT _CreateInputLayout()
+	{
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -162,44 +160,86 @@ namespace DirectXViewer
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 		};
 		UINT numInputElements = ARRAYSIZE(inputElementDesc);
-		hr = device_p->CreateInputLayout(inputElementDesc, numInputElements, vertexshader_default, sizeof(vertexshader_default), &vertexLayout_p);
+		return device_p->CreateInputLayout(inputElementDesc, numInputElements, vertexshader_default, sizeof(vertexshader_default), &vertexLayout_p);
+	}
+	HRESULT _CreateVertexBuffers()
+	{
+		HRESULT hr;
+
+		hr = D3DCreateVertexBuffer((uint32_t)DebugRenderer::get_line_vert_capacity(), (DXVVERTEX*)DebugRenderer::get_line_verts(), &vbuffer_debug_p);
 		if (FAILED(hr)) return hr;
 
-		deviceContext_p->IASetInputLayout(vertexLayout_p);
+		return hr;
+	}
+	HRESULT _CreateConstantBuffers()
+	{
+		HRESULT hr;
 
-
-		// create linear sampler
-		hr = D3DCreateSamplerState(&samplerLinear_p, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
-		if (FAILED(hr)) return hr;
-
-
-		// create D3D constant buffers
 		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_VS), &cbuffer_d3d_vs_p);
 		if (FAILED(hr)) return hr;
 
 		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_PS), &cbuffer_d3d_ps_p);
 		if (FAILED(hr)) return hr;
 
+		return hr;
+	}
+	HRESULT _CreateShaders()
+	{
+		HRESULT hr;
 
-		// create D3D shaders
-		hr = device_p->CreateVertexShader(vertexshader_default, sizeof(vertexshader_default), nullptr, &shader_vertex_p);
+		hr = device_p->CreateVertexShader(vertexshader_default, sizeof(vertexshader_default), nullptr, &shader_vertex_default_p);
 		if (FAILED(hr)) return hr;
 
-		hr = device_p->CreatePixelShader(pixelshader_default, sizeof(pixelshader_default), nullptr, &shader_pixel_p);
+		hr = device_p->CreatePixelShader(pixelshader_default, sizeof(pixelshader_default), nullptr, &shader_pixel_default_p);
 		if (FAILED(hr)) return hr;
 
+		hr = device_p->CreatePixelShader(pixelshader_debug, sizeof(pixelshader_debug), nullptr, &shader_pixel_debug_p);
+		if (FAILED(hr)) return hr;
 
-		// set viewport values
+		return hr;
+	}
+
+	HRESULT	_InitD3DResources()
+	{
+		HRESULT hr;
+
+		errormsg = "D3D initialization failed";
+
+
+		hr = _CreateDeviceAndSwapChain();
+		if (FAILED(hr)) return hr;
+
+		hr = _CreateRenderTargetView();
+		if (FAILED(hr)) return hr;
+
+		hr = D3DCreateDepthStencilView(windowWidth, windowHeight, &depthStencil_p, &depthStencilView_p);
+		if (FAILED(hr)) return hr;
+
+		hr = _CreateInputLayout();
+		if (FAILED(hr)) return hr;
+
+		deviceContext_p->IASetInputLayout(vertexLayout_p);
+
+		hr = D3DCreateSamplerState(&samplerLinear_p, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+		if (FAILED(hr)) return hr;
+
+		hr = _CreateVertexBuffers();
+		if (FAILED(hr)) return hr;
+
+		hr = _CreateConstantBuffers();
+		if (FAILED(hr)) return hr;
+
+		hr = _CreateShaders();
+		if (FAILED(hr)) return hr;
+
 		D3DConfigureViewport(&viewport, (float)windowWidth, (float)windowHeight);
 
-
-		// set topology type
-		deviceContext_p->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		deviceContext_p->IASetPrimitiveTopology(DXV_PRIMITIVE_TOPOLOGY_DEFAULT);
 
 
 		return hr;
 	}
-	HRESULT OpenFile(const char* _filepath, std::fstream* _fin)
+	HRESULT _OpenFile(const char* _filepath, std::fstream* _fin)
 	{
 		HRESULT hr = E_INVALIDARG;
 
@@ -220,7 +260,20 @@ namespace DirectXViewer
 
 	// update
 
-	void ReadInputs(const MSG* _msg)
+	float _GetTimeSinceLastUpdate()
+	{
+		static uint64_t startTime = 0;
+		static uint64_t prevTime = 0;
+		uint64_t curTime = GetTickCount64();
+		if (startTime == 0)
+			startTime = prevTime = curTime;
+		static float t = (curTime - startTime) / 1000.0f;
+		float dt = (curTime - prevTime) / 1000.0f;
+		prevTime = curTime;
+
+		return dt;
+	}
+	void _ReadInputs(const MSG* _msg)
 	{
 		// camera translation
 		if (_msg->message == WM_KEYDOWN || _msg->message == WM_KEYUP)
@@ -269,7 +322,7 @@ namespace DirectXViewer
 			yMouse = HIWORD(_msg->lParam);
 		}
 	}
-	void UpdateCamera(float _dt)
+	void _UpdateCamera(float _dt)
 	{
 		XMMATRIX mView = XMMatrixInverse(nullptr, XMLoadFloat4x4(&view));
 
@@ -350,7 +403,7 @@ namespace DirectXViewer
 	void SetCurrentWorldMatrix(XMMATRIX _m)
 	{
 		cbuffer_vs.world = _m;
-		SetWorldITMatrix(_m);
+		_SetWorldITMatrix(_m);
 	}
 	void SetCurrentViewMatrix(XMMATRIX _m) { cbuffer_vs.view = _m; }
 	void SetCurrentProjectionMatrix(XMMATRIX _m) { cbuffer_vs.projection = _m; }
@@ -361,12 +414,12 @@ namespace DirectXViewer
 	void D3DSetEmissiveMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(1, 1, &_material_p); }
 	void D3DSetSpecularMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(2, 1, &_material_p); }
 	void D3DSetNormalMapMaterial(ID3D11ShaderResourceView* _material_p) { deviceContext_p->PSSetShaderResources(3, 1, &_material_p); }
-	void D3DSetClearToColor(float _color[4])
+	void D3DSetClearToColor(XMFLOAT4 _color)
 	{
-		clearToColor[0] = _color[0];
-		clearToColor[1] = _color[1];
-		clearToColor[2] = _color[2];
-		clearToColor[3] = _color[3];
+		clearToColor[0] = _color.x;
+		clearToColor[1] = _color.y;
+		clearToColor[2] = _color.z;
+		clearToColor[3] = _color.w;
 	}
 
 	void DXVSetMesh(DXVMESH* _mesh_p)
@@ -406,7 +459,7 @@ namespace DirectXViewer
 
 
 		// initialize basic D3D resources
-		hr = InitD3DResources();
+		hr = _InitD3DResources();
 		if (FAILED(hr)) return hr;
 
 
@@ -437,38 +490,30 @@ namespace DirectXViewer
 	}
 	void Update(const MSG* _msg)
 	{
-		// get clock ticks since previous call
-		static uint64_t startTime = 0;
-		static uint64_t prevTime = 0;
-		uint64_t curTime = GetTickCount64();
-		if (startTime == 0)
-			startTime = prevTime = curTime;
-		float t = (curTime - startTime) / 1000.0f;
-		float dt = (curTime - prevTime) / 1000.0f;
-		prevTime = curTime;
-
+		float dt = _GetTimeSinceLastUpdate();
+		_ReadInputs(_msg);
+		_UpdateCamera(dt);
+		DebugRenderer::clear_lines();
 
 
 		// orbit light around origin
 		XMVECTOR t_light_pos = { light_pos.x, light_pos.y, light_pos.z };
 		t_light_pos = (XMMatrixTranslationFromVector(t_light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
 		light_pos = { XMVectorGetX(t_light_pos), XMVectorGetY(t_light_pos), XMVectorGetZ(t_light_pos) };
-
-
-		// read input and update camera
-		ReadInputs(_msg);
-		UpdateCamera(dt);
 	}
 	void Cleanup()
 	{
 		// release D3D resources
 #define RELEASE(p) if (p) p->Release()
 
-		RELEASE(shader_pixel_p);
-		RELEASE(shader_vertex_p);
+		RELEASE(shader_pixel_debug_p);
+		RELEASE(shader_pixel_default_p);
+		RELEASE(shader_vertex_default_p);
 
 		RELEASE(cbuffer_d3d_ps_p);
 		RELEASE(cbuffer_d3d_vs_p);
+
+		RELEASE(vbuffer_debug_p);
 
 		RELEASE(samplerLinear_p);
 
@@ -484,6 +529,7 @@ namespace DirectXViewer
 
 #undef RELEASE
 
+		// remove objects from scene
 		sceneObjects.clear();
 
 		// uninitialize WIC texture loader
@@ -492,7 +538,7 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Draw Functions
-	void Draw(bool _present)
+	void Draw(uint32_t _draw_mode)
 	{
 		// clear constant buffer data
 		cbuffer_vs = {};
@@ -523,29 +569,44 @@ namespace DirectXViewer
 		cbuffer_ps.surface_shininess = surface_shininess;
 		UpdatePSConstantBuffer();
 
-		//cbuffer_ps.light_pos = { 0, 10, 0 };
-		//cbuffer_ps.light_power = 1.0f;
-		//cbuffer_ps.light_color = { 1, 1, 1 };
-		//cbuffer_ps.surface_shininess = 1.0f;
-		//deviceContext_p->UpdateSubresource(cbuffer_d3d_ps_p, 0, nullptr, &cbuffer_ps, 0, 0);
-
 		// set shaders
-		deviceContext_p->VSSetShader(shader_vertex_p, 0, 0);
-		deviceContext_p->PSSetShader(shader_pixel_p, 0, 0);
+		deviceContext_p->VSSetShader(shader_vertex_default_p, 0, 0);
+		deviceContext_p->PSSetShader(shader_pixel_default_p, 0, 0);
 
 		// set samplers
 		deviceContext_p->PSSetSamplers(0, 1, &samplerLinear_p);
 
 
-		// draw objects in scene
-		for (uint32_t i = 0; i < sceneObjects.size(); i++)
+		// draw objects in scene if not disabled
+		if (!(_draw_mode & DRAW_MODE::NO_SCENE_OBJECTS))
+			for (uint32_t i = 0; i < sceneObjects.size(); i++)
+			{
+				DXVSetObject(sceneObjects[i]);
+				D3DDrawIndexed(sceneObjects[i]->mesh_p->indexCount);
+			}
+
+
+		// draw debug lines if flag is set
+		if (_draw_mode & DRAW_MODE::DRAW_DEBUG)
 		{
-			DXVSetObject(sceneObjects[i]);
-			D3DDrawIndexed(sceneObjects[i]->mesh_p->indexCount);
+			deviceContext_p->IASetPrimitiveTopology(DXV_PRIMITIVE_TOPOLOGY_DEBUG);
+
+
+			deviceContext_p->PSSetShader(shader_pixel_debug_p, nullptr, 0);
+			deviceContext_p->IASetVertexBuffers(0, 1, &vbuffer_debug_p, strides, offsets);
+			deviceContext_p->UpdateSubresource(vbuffer_debug_p, 0, NULL, DebugRenderer::get_line_verts(), 0, 0);
+
+			SetDefaultWorldMatrix(XMMatrixIdentity());
+			UpdateVSConstantBuffer();
+
+			deviceContext_p->Draw((uint32_t)DebugRenderer::get_line_vert_count(), 0);
+
+
+			deviceContext_p->IASetPrimitiveTopology(DXV_PRIMITIVE_TOPOLOGY_DEFAULT);
 		}
 
 
-		if (_present)
+		if (!(_draw_mode & DRAW_MODE::NO_PRESENT))
 			Present();
 	}
 	void Present(UINT _syncInterval, UINT _flags) { swapChain_p->Present(_syncInterval, _flags); }
@@ -560,7 +621,7 @@ namespace DirectXViewer
 		HRESULT hr;
 		std::fstream fin;
 
-		hr = OpenFile(_filepath, &fin);
+		hr = _OpenFile(_filepath, &fin);
 		if (FAILED(hr)) return hr;
 
 		DXVMESHDATA* meshdata_p = new DXVMESHDATA;
@@ -618,7 +679,7 @@ namespace DirectXViewer
 		HRESULT hr;
 		std::fstream fin;
 
-		hr = OpenFile(_filepath, &fin);
+		hr = _OpenFile(_filepath, &fin);
 		if (FAILED(hr)) return hr;
 
 		struct SIMPLEMATERIAL
@@ -709,16 +770,6 @@ namespace DirectXViewer
 				return hr;
 			}
 		}
-		// FOR EACH COMPONENT :
-
-		/*
-		HRESULT CreateWICTextureFromFile(
-			_In_ ID3D11Device* d3dDevice,								// device_p
-			_In_z_ const wchar_t* szFileName,							// material_p.components[c].path
-			_Outptr_opt_ ID3D11Resource** texture,						// material_p.components[c].texture_p
-			_Outptr_opt_ ID3D11ShaderResourceView** textureView,		// material_p.components[c].textureView_p
-			_In_ size_t maxsize = 0)
-		*/
 
 
 		*_material_pp = material_p;
@@ -857,5 +908,38 @@ namespace DirectXViewer
 	void UpdateVSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_vs_p, 0, nullptr, &cbuffer_vs, 0, 0); }
 	void UpdatePSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_ps_p, 0, nullptr, &cbuffer_ps, 0, 0); }
 #pragma endregion
+
+
+	namespace DebugRenderer
+	{
+#pragma region Variables
+		constexpr size_t capacity = 4096;
+
+		size_t count = 0;
+		std::array<DXVVERTEX, capacity> line_verts;
+#pragma endregion
+
+#pragma region Functions
+		// adds line to array
+		void add_line(XMFLOAT3 _point_a, XMFLOAT3 _point_b, XMFLOAT4 _color_a, XMFLOAT4 _color_b)
+		{
+			line_verts[count++] = { _point_a, {}, _color_a, {} };
+			line_verts[count++] = { _point_b, {}, _color_b, {} };
+		}
+
+		// resets vertex count
+		void clear_lines() { count = 0; }
+
+		// returns address of first vertex
+		const DXVVERTEX* get_line_verts() { return &line_verts[0]; }
+
+		// returns vertex count
+		size_t get_line_vert_count() { return count; }
+
+		// returns vertex capacity
+		size_t get_line_vert_capacity() { return capacity; }
+#pragma endregion
+
+	}
 
 }
