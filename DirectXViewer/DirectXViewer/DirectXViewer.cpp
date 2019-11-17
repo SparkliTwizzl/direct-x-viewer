@@ -456,7 +456,7 @@ namespace DirectXViewer
 			deviceContext_p->IASetVertexBuffers(0, 1, &vertexBuffers[VERTEX_BUFFER::DEBUG], strides, offsets);
 			deviceContext_p->UpdateSubresource(vertexBuffers[VERTEX_BUFFER::DEBUG], 0, NULL, DebugRenderer::get_line_verts(), 0, 0);
 
-			SetDefaultWorldMatrix(XMMatrixIdentity());
+			SetCurrentWorldMatrix(XMMatrixIdentity());
 			UpdateVSConstantBuffer();
 
 			deviceContext_p->Draw((uint32_t)DebugRenderer::get_line_vert_count(), 0);
@@ -832,7 +832,7 @@ namespace DirectXViewer
 	}
 
 	void inline UpdateVSConstantBuffer()
-	{ 
+	{
 		deviceContext_p->UpdateSubresource(constantBuffers_vs_D3D[CONSTANT_BUFFER_VS::DEFAULT], 0, nullptr, &constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT], 0, 0);
 	}
 	void inline UpdatePSConstantBuffer()
@@ -902,23 +902,14 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Functions
-		// adds line to array
 		void add_line(XMFLOAT3 _point_a, XMFLOAT3 _point_b, XMFLOAT4 _color_a, XMFLOAT4 _color_b)
 		{
 			line_verts[count++] = { _point_a, {}, _color_a, {} };
 			line_verts[count++] = { _point_b, {}, _color_b, {} };
 		}
-
-		// resets vertex count
 		void clear_lines() { count = 0; }
-
-		// returns address of first vertex
 		const DXVVERTEX* get_line_verts() { return &line_verts[0]; }
-
-		// returns vertex count
 		size_t get_line_vert_count() { return count; }
-
-		// returns vertex capacity
 		size_t get_line_vert_capacity() { return capacity; }
 #pragma endregion
 

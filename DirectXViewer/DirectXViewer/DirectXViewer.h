@@ -592,6 +592,7 @@ namespace DirectXViewer
 	// NOTES:
 	//   This function can use either the joints from a bindpose or the transforms from a frame depending on the overload
 	//   Use _offset matrix to adjust the position to render the skeleton at
+	//   Pass a DXVOBJECT's model matrix as _offset to render a skeleton at its position
 	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, DXVANIMATION::FRAME* _frame_p, XMMATRIX _offset = XMMatrixIdentity());
 	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, XMMATRIX _offset = XMMatrixIdentity());
 #pragma endregion

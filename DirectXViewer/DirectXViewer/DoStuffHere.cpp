@@ -48,35 +48,35 @@ namespace DXVInterface
 	DirectXViewer::DXVOBJECT			testobj;
 #pragma endregion
 
-#pragma region Input Variables
-#define INPUT_X_NEG 'A'
-#define INPUT_X_POS 'D'
-#define INPUT_Y_NEG VK_SHIFT
-#define INPUT_Y_POS VK_SPACE
-#define INPUT_Z_NEG 'S'
-#define INPUT_Z_POS 'W'
+#pragma region Camera Input Variables
+#define INPUT_CAM_TRANS_X_NEG 'A'
+#define INPUT_CAM_TRANS_X_POS 'D'
+#define INPUT_CAM_TRANS_Y_NEG VK_SHIFT
+#define INPUT_CAM_TRANS_Y_POS VK_SPACE
+#define INPUT_CAM_TRANS_Z_NEG 'S'
+#define INPUT_CAM_TRANS_Z_POS 'W'
 
-	enum Inputs_e
+	enum INPUTS_CAMERA
 	{
-		CamTranslateXNeg = 0
-		, CamTranslateXPos
-		, CamTranslateYNeg
-		, CamTranslateYPos
-		, CamTranslateZNeg
-		, CamTranslateZPos
-		, CamRotate
-		, Count
+		TRANSLATE_X_NEG = 0
+		, TRANSLATE_X_POS
+		, TRANSLATE_Y_NEG
+		, TRANSLATE_Y_POS
+		, TRANSLATE_Z_NEG
+		, TRANSLATE_Z_POS
+		, ROTATE
+		, COUNT
 	};
 
-	std::bitset<Inputs_e::Count>	inputValues;
+	std::bitset<INPUTS_CAMERA::COUNT>	inputs_camera;
 
-	int32_t							xMouse;
-	int32_t							yMouse;
-	int32_t							xMouse_prev;
-	int32_t							yMouse_prev;
+	int32_t								xMouse;
+	int32_t								yMouse;
+	int32_t								xMouse_prev;
+	int32_t								yMouse_prev;
 
-	const float						camTranslationSpeed = 4.0f;
-	const float						camRotationSpeed = 0.1f;
+	const float							camTranslationSpeed = 3.0f;
+	const float							camRotationSpeed = 0.15f;
 #pragma endregion
 
 
@@ -103,23 +103,23 @@ namespace DXVInterface
 
 			switch (_msg->wParam)
 			{
-			case INPUT_X_NEG:
-				inputValues.set(Inputs_e::CamTranslateXNeg, value);
+			case INPUT_CAM_TRANS_X_NEG:
+				inputs_camera.set(INPUTS_CAMERA::TRANSLATE_X_NEG, value);
 				break;
-			case INPUT_X_POS:
-				inputValues.set(Inputs_e::CamTranslateXPos, value);
+			case INPUT_CAM_TRANS_X_POS:
+				inputs_camera.set(INPUTS_CAMERA::TRANSLATE_X_POS, value);
 				break;
-			case INPUT_Y_NEG:
-				inputValues.set(Inputs_e::CamTranslateYNeg, value);
+			case INPUT_CAM_TRANS_Y_NEG:
+				inputs_camera.set(INPUTS_CAMERA::TRANSLATE_Y_NEG, value);
 				break;
-			case INPUT_Y_POS:
-				inputValues.set(Inputs_e::CamTranslateYPos, value);
+			case INPUT_CAM_TRANS_Y_POS:
+				inputs_camera.set(INPUTS_CAMERA::TRANSLATE_Y_POS, value);
 				break;
-			case INPUT_Z_NEG:
-				inputValues.set(Inputs_e::CamTranslateZNeg, value);
+			case INPUT_CAM_TRANS_Z_NEG:
+				inputs_camera.set(INPUTS_CAMERA::TRANSLATE_Z_NEG, value);
 				break;
-			case INPUT_Z_POS:
-				inputValues.set(Inputs_e::CamTranslateZPos, value);
+			case INPUT_CAM_TRANS_Z_POS:
+				inputs_camera.set(INPUTS_CAMERA::TRANSLATE_Z_POS, value);
 				break;
 			default:
 				break;
@@ -129,11 +129,11 @@ namespace DXVInterface
 		// camera rotation
 		if (_msg->message == WM_RBUTTONDOWN)
 		{
-			inputValues.set(Inputs_e::CamRotate, true);
+			inputs_camera.set(INPUTS_CAMERA::ROTATE, true);
 		}
 		if (_msg->message == WM_RBUTTONUP)
 		{
-			inputValues.set(Inputs_e::CamRotate, false);
+			inputs_camera.set(INPUTS_CAMERA::ROTATE, false);
 		}
 		if (_msg->message == WM_MOUSEMOVE)
 		{
@@ -160,21 +160,21 @@ namespace DXVInterface
 		// get translation amounts
 
 		// X
-		if (inputValues.test(Inputs_e::CamTranslateXNeg))
+		if (inputs_camera.test(INPUTS_CAMERA::TRANSLATE_X_NEG))
 			dX -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs_e::CamTranslateXPos))
+		if (inputs_camera.test(INPUTS_CAMERA::TRANSLATE_X_POS))
 			dX += t_camTranslationSpeed;
 
 		// Y
-		if (inputValues.test(Inputs_e::CamTranslateYNeg))
+		if (inputs_camera.test(INPUTS_CAMERA::TRANSLATE_Y_NEG))
 			dY -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs_e::CamTranslateYPos))
+		if (inputs_camera.test(INPUTS_CAMERA::TRANSLATE_Y_POS))
 			dY += t_camTranslationSpeed;
 
 		// Z
-		if (inputValues.test(Inputs_e::CamTranslateZNeg))
+		if (inputs_camera.test(INPUTS_CAMERA::TRANSLATE_Z_NEG))
 			dZ -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs_e::CamTranslateZPos))
+		if (inputs_camera.test(INPUTS_CAMERA::TRANSLATE_Z_POS))
 			dZ += t_camTranslationSpeed;
 
 
@@ -182,7 +182,7 @@ namespace DXVInterface
 		mView = ((XMMatrixTranslation(dX, 0, 0) * mView) * XMMatrixTranslation(0, dY, 0)) * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
 
 
-		if (inputValues.test(Inputs_e::CamRotate))
+		if (inputs_camera.test(INPUTS_CAMERA::ROTATE))
 		{
 			// get rotation amounts
 			float camRotY = (float)(xMouse - xMouse_prev) * t_camRotationSpeed
@@ -227,7 +227,7 @@ namespace DXVInterface
 	}
 	void ManualUpdate()
 	{
-		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->keyframes[0], XMMatrixTranslation(0, 0, 0));
+		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->keyframes[0], XMMatrixTranslation(2, 0, 0));
 	}
 	void ManualDraw()
 	{
