@@ -24,7 +24,108 @@ namespace DirectXViewer
 #define IBUFFER_FORMAT DXGI_FORMAT_R32_UINT
 #define DXV_PRIMITIVE_TOPOLOGY_DEFAULT D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
 #define DXV_PRIMITIVE_TOPOLOGY_DEBUG D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+#pragma endregion
 
+#pragma region Enums
+	struct RENDER_TARGET_VIEW
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct DEPTH_STENCIL
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct DEPTH_STENCIL_VIEW
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct VERTEX_LAYOUT
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct SAMPLER_STATE
+	{
+		enum
+		{
+			LINEAR = 0
+			, COUNT
+		};
+	};
+
+	struct VERTEX_BUFFER
+	{
+		enum
+		{
+			DEBUG = 0
+			, COUNT
+		};
+	};
+
+	struct CONSTANT_BUFFER_VS
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct CONSTANT_BUFFER_PS
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct SHADER_VERTEX
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
+
+	struct SHADER_PIXEL
+	{
+		enum
+		{
+			DEFAULT = 0
+			, DEBUG
+			, COUNT
+		};
+	};
+
+	struct VIEWPORT
+	{
+		enum
+		{
+			DEFAULT = 0
+			, COUNT
+		};
+	};
 
 	// Used to set behavior of DXV drawing
 	// VALUES :
@@ -365,7 +466,7 @@ namespace DirectXViewer
 	void D3DDrawIndexed(uint32_t _numInds);
 #pragma endregion
 
-#pragma region Mesh/Material/Object Functions
+#pragma region Mesh/Material/Animation/Object Functions
 	// Loads mesh data from file into a DXVMESHDATA
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp);
 
@@ -472,6 +573,9 @@ namespace DirectXViewer
 	//   Use _scale to change the length of the axes
 	//   Set _showNegativeAxes to true to draw negative axes in inverted colors
 	void debug_AddMatrixToDebugRenderer(XMMATRIX _m, float _scale = 1.0f, bool _showNegativeAxes = false);
+
+	// Adds a bone from an animation frame's skeleton to the debug renderer
+	void debug_AddBoneToDebugRenderer(XMMATRIX _parent, XMMATRIX _child, XMFLOAT4 _color = WHITE_RGBA_FLOAT32);
 
 	// Adds an animation frame's bones and joints to the debug renderer
 	// NOTES:

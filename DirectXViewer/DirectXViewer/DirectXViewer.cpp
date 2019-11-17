@@ -28,27 +28,26 @@ namespace DirectXViewer
 	ID3D11DeviceContext*			deviceContext_p = nullptr;
 	IDXGISwapChain*					swapChain_p = nullptr;
 
-	ID3D11RenderTargetView*			renderTargetView_p = nullptr;
-	ID3D11Texture2D*				depthStencil_p = nullptr;
-	ID3D11DepthStencilView*			depthStencilView_p = nullptr;
+	ID3D11RenderTargetView*			renderTargetViews[RENDER_TARGET_VIEW::COUNT];
+	ID3D11Texture2D*				depthStencils[DEPTH_STENCIL::COUNT];
+	ID3D11DepthStencilView*			depthStencilViews[DEPTH_STENCIL_VIEW::COUNT];
 
-	ID3D11InputLayout*				vertexLayout_p = nullptr;
+	ID3D11InputLayout*				vertexLayouts[VERTEX_LAYOUT::COUNT];
 
-	ID3D11SamplerState*				samplerLinear_p = nullptr;
+	ID3D11SamplerState*				samplerStates[SAMPLER_STATE::COUNT];
 
-	ID3D11Buffer*					vbuffer_debug_p = nullptr;
+	ID3D11Buffer*					vertexBuffers[VERTEX_BUFFER::COUNT];
 
-	DXVCBUFFER_VS					cbuffer_vs;
-	DXVCBUFFER_PS					cbuffer_ps;
+	DXVCBUFFER_VS					constantBuffers_vs[CONSTANT_BUFFER_VS::COUNT];
+	DXVCBUFFER_PS					constantBuffers_ps[CONSTANT_BUFFER_VS::COUNT];
 
-	ID3D11Buffer*					cbuffer_d3d_vs_p = nullptr;
-	ID3D11Buffer*					cbuffer_d3d_ps_p = nullptr;
+	ID3D11Buffer*					constantBuffers_vs_D3D[CONSTANT_BUFFER_VS::COUNT];
+	ID3D11Buffer*					constantBuffers_ps_D3D[CONSTANT_BUFFER_VS::COUNT];
 
-	ID3D11VertexShader*				shader_vertex_default_p = nullptr;
-	ID3D11PixelShader*				shader_pixel_default_p = nullptr;
-	ID3D11PixelShader*				shader_pixel_debug_p = nullptr;
+	ID3D11VertexShader*				shaders_vertex[SHADER_VERTEX::COUNT];
+	ID3D11PixelShader*				shaders_pixel[SHADER_PIXEL::COUNT];
 
-	D3D11_VIEWPORT					viewport;
+	D3D11_VIEWPORT					viewports[VIEWPORT::COUNT];
 
 	uint32_t						strides[] = { sizeof(DXVVERTEX) };
 	uint32_t						offsets[] = { 0 };
@@ -114,7 +113,7 @@ namespace DirectXViewer
 	// setters
 
 	// sets the inverse-transpose world matrix (used for normal vectors in shaders)
-	void inline _SetWorldITMatrix(XMMATRIX _m) { cbuffer_vs.worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
+	void inline _SetWorldITMatrix(XMMATRIX _m) { constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].worldIT = XMMatrixTranspose(XMMatrixInverse(nullptr, _m)); }
 
 
 	// init
@@ -139,7 +138,7 @@ namespace DirectXViewer
 			createDeviceFlags, &featureLevel, 1, D3D11_SDK_VERSION,
 			&swapChainDesc, &swapChain_p, &device_p, 0, &deviceContext_p);
 	}
-	HRESULT _CreateRenderTargetView()
+	HRESULT _CreateRenderTargetViews()
 	{
 		HRESULT hr;
 
@@ -148,15 +147,17 @@ namespace DirectXViewer
 		hr = swapChain_p->GetBuffer(0, __uuidof(backbuffer_p), (void**)&backbuffer_p);
 		if (FAILED(hr)) return hr;
 
-		hr = device_p->CreateRenderTargetView(backbuffer_p, nullptr, &renderTargetView_p);
+		hr = device_p->CreateRenderTargetView(backbuffer_p, nullptr, &renderTargetViews[RENDER_TARGET_VIEW::DEFAULT]);
 		if (FAILED(hr)) return hr;
 
 		backbuffer_p->Release();
 
 		return hr;
 	}
-	HRESULT _CreateInputLayout()
+	HRESULT _CreateInputLayouts()
 	{
+		HRESULT hr;
+
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -165,13 +166,15 @@ namespace DirectXViewer
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 		};
 		UINT numInputElements = ARRAYSIZE(inputElementDesc);
-		return device_p->CreateInputLayout(inputElementDesc, numInputElements, vertexshader_default, sizeof(vertexshader_default), &vertexLayout_p);
+		hr = device_p->CreateInputLayout(inputElementDesc, numInputElements, vertexshader_default, sizeof(vertexshader_default), &vertexLayouts[VERTEX_LAYOUT::DEFAULT]);
+
+		return hr;
 	}
 	HRESULT _CreateVertexBuffers()
 	{
 		HRESULT hr;
 
-		hr = D3DCreateVertexBuffer((uint32_t)DebugRenderer::get_line_vert_capacity(), (DXVVERTEX*)DebugRenderer::get_line_verts(), &vbuffer_debug_p);
+		hr = D3DCreateVertexBuffer((uint32_t)DebugRenderer::get_line_vert_capacity(), (DXVVERTEX*)DebugRenderer::get_line_verts(), &vertexBuffers[VERTEX_BUFFER::DEBUG]);
 		if (FAILED(hr)) return hr;
 
 		return hr;
@@ -180,10 +183,10 @@ namespace DirectXViewer
 	{
 		HRESULT hr;
 
-		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_VS), &cbuffer_d3d_vs_p);
+		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_VS), &constantBuffers_vs_D3D[CONSTANT_BUFFER_VS::DEFAULT]);
 		if (FAILED(hr)) return hr;
 
-		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_PS), &cbuffer_d3d_ps_p);
+		hr = D3DCreateConstantBuffer(sizeof(DXVCBUFFER_PS), &constantBuffers_ps_D3D[CONSTANT_BUFFER_PS::DEFAULT]);
 		if (FAILED(hr)) return hr;
 
 		return hr;
@@ -192,13 +195,13 @@ namespace DirectXViewer
 	{
 		HRESULT hr;
 
-		hr = device_p->CreateVertexShader(vertexshader_default, sizeof(vertexshader_default), nullptr, &shader_vertex_default_p);
+		hr = device_p->CreateVertexShader(vertexshader_default, sizeof(vertexshader_default), nullptr, &shaders_vertex[SHADER_VERTEX::DEFAULT]);
 		if (FAILED(hr)) return hr;
 
-		hr = device_p->CreatePixelShader(pixelshader_default, sizeof(pixelshader_default), nullptr, &shader_pixel_default_p);
+		hr = device_p->CreatePixelShader(pixelshader_default, sizeof(pixelshader_default), nullptr, &shaders_pixel[SHADER_PIXEL::DEFAULT]);
 		if (FAILED(hr)) return hr;
 
-		hr = device_p->CreatePixelShader(pixelshader_debug, sizeof(pixelshader_debug), nullptr, &shader_pixel_debug_p);
+		hr = device_p->CreatePixelShader(pixelshader_debug, sizeof(pixelshader_debug), nullptr, &shaders_pixel[SHADER_PIXEL::DEBUG]);
 		if (FAILED(hr)) return hr;
 
 		return hr;
@@ -214,18 +217,18 @@ namespace DirectXViewer
 		hr = _CreateDeviceAndSwapChain();
 		if (FAILED(hr)) return hr;
 
-		hr = _CreateRenderTargetView();
+		hr = _CreateRenderTargetViews();
 		if (FAILED(hr)) return hr;
 
-		hr = D3DCreateDepthStencilView(windowWidth, windowHeight, &depthStencil_p, &depthStencilView_p);
+		hr = D3DCreateDepthStencilView(windowWidth, windowHeight, &depthStencils[DEPTH_STENCIL::DEFAULT], &depthStencilViews[DEPTH_STENCIL_VIEW::DEFAULT]);
 		if (FAILED(hr)) return hr;
 
-		hr = _CreateInputLayout();
+		hr = _CreateInputLayouts();
 		if (FAILED(hr)) return hr;
 
-		deviceContext_p->IASetInputLayout(vertexLayout_p);
+		deviceContext_p->IASetInputLayout(vertexLayouts[VERTEX_LAYOUT::DEFAULT]);
 
-		hr = D3DCreateSamplerState(&samplerLinear_p, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+		hr = D3DCreateSamplerState(&samplerStates[SAMPLER_STATE::LINEAR], D3D11_FILTER_MIN_MAG_MIP_LINEAR);
 		if (FAILED(hr)) return hr;
 
 		hr = _CreateVertexBuffers();
@@ -237,7 +240,7 @@ namespace DirectXViewer
 		hr = _CreateShaders();
 		if (FAILED(hr)) return hr;
 
-		D3DConfigureViewport(&viewport, (float)windowWidth, (float)windowHeight);
+		D3DConfigureViewport(&viewports[VIEWPORT::DEFAULT], (float)windowWidth, (float)windowHeight);
 
 		deviceContext_p->IASetPrimitiveTopology(DXV_PRIMITIVE_TOPOLOGY_DEFAULT);
 
@@ -392,9 +395,9 @@ namespace DirectXViewer
 	XMMATRIX GetDefaultWorldMatrix() { return XMLoadFloat4x4(&world); }
 	XMMATRIX GetDefaultViewMatrix() { return XMLoadFloat4x4(&view); }
 	XMMATRIX GetDefaultProjectionMatrix() { return XMLoadFloat4x4(&projection); }
-	XMMATRIX GetCurrentWorldMatrix() { return cbuffer_vs.world; }
-	XMMATRIX GetCurrentViewMatrix() { return cbuffer_vs.view; }
-	XMMATRIX GetCurrentProjectionMatrix() { return cbuffer_vs.projection; }
+	XMMATRIX GetCurrentWorldMatrix() { return constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].world; }
+	XMMATRIX GetCurrentViewMatrix() { return constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].view; }
+	XMMATRIX GetCurrentProjectionMatrix() { return constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].projection; }
 
 	ID3D11Device* GetDevice() { return device_p; }
 	ID3D11DeviceContext* GetDeviceContext() { return deviceContext_p; }
@@ -407,11 +410,11 @@ namespace DirectXViewer
 	void SetDefaultProjectionMatrix(XMMATRIX _m) { XMStoreFloat4x4(&projection, _m); }
 	void SetCurrentWorldMatrix(XMMATRIX _m)
 	{
-		cbuffer_vs.world = _m;
+		constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].world = _m;
 		_SetWorldITMatrix(_m);
 	}
-	void SetCurrentViewMatrix(XMMATRIX _m) { cbuffer_vs.view = _m; }
-	void SetCurrentProjectionMatrix(XMMATRIX _m) { cbuffer_vs.projection = _m; }
+	void SetCurrentViewMatrix(XMMATRIX _m) { constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].view = _m; }
+	void SetCurrentProjectionMatrix(XMMATRIX _m) { constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].projection = _m; }
 
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
 	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p) { deviceContext_p->IASetIndexBuffer(_ibuffer_p, IBUFFER_FORMAT, 0); }
@@ -511,22 +514,37 @@ namespace DirectXViewer
 		// release D3D resources
 #define RELEASE(p) if (p) p->Release()
 
-		RELEASE(shader_pixel_debug_p);
-		RELEASE(shader_pixel_default_p);
-		RELEASE(shader_vertex_default_p);
+		uint32_t i;
 
-		RELEASE(cbuffer_d3d_ps_p);
-		RELEASE(cbuffer_d3d_vs_p);
+		for (i = 0; i < SHADER_PIXEL::COUNT; i++)
+			RELEASE(shaders_pixel[i]);
 
-		RELEASE(vbuffer_debug_p);
+		for (i = 0; i < SHADER_VERTEX::COUNT; i++)
+			RELEASE(shaders_vertex[i]);
 
-		RELEASE(samplerLinear_p);
+		for (i = 0; i < CONSTANT_BUFFER_PS::COUNT; i++)
+			RELEASE(constantBuffers_ps_D3D[i]);
 
-		RELEASE(vertexLayout_p);
+		for (i = 0; i < CONSTANT_BUFFER_VS::COUNT; i++)
+			RELEASE(constantBuffers_vs_D3D[i]);
 
-		RELEASE(depthStencilView_p);
-		RELEASE(depthStencil_p);
-		RELEASE(renderTargetView_p);
+		for (i = 0; i < VERTEX_BUFFER::COUNT; i++)
+			RELEASE(vertexBuffers[i]);
+
+		for (i = 0; i < SAMPLER_STATE::COUNT; i++)
+			RELEASE(samplerStates[i]);
+
+		for (i = 0; i < VERTEX_LAYOUT::COUNT; i++)
+			RELEASE(vertexLayouts[i]);
+
+		for (i = 0; i < DEPTH_STENCIL_VIEW::COUNT; i++)
+			RELEASE(depthStencilViews[i]);
+
+		for (i = 0; i < DEPTH_STENCIL::COUNT; i++)
+			RELEASE(depthStencils[i]);
+
+		for (i = 0; i < RENDER_TARGET_VIEW::COUNT; i++)
+			RELEASE(renderTargetViews[i]);
 
 		RELEASE(swapChain_p);
 		RELEASE(deviceContext_p);
@@ -546,20 +564,20 @@ namespace DirectXViewer
 	void Draw(uint32_t _draw_mode)
 	{
 		// clear constant buffer data
-		cbuffer_vs = {};
-		cbuffer_ps = {};
+		constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT] = {};
+		constantBuffers_ps[CONSTANT_BUFFER_PS::DEFAULT] = {};
 
 		// set viewport
-		deviceContext_p->RSSetViewports(1, &viewport);
+		deviceContext_p->RSSetViewports(1, &viewports[VIEWPORT::DEFAULT]);
 
 		// set and clear render target and depth stencil
-		deviceContext_p->OMSetRenderTargets(1, &renderTargetView_p, depthStencilView_p);
-		deviceContext_p->ClearRenderTargetView(renderTargetView_p, clearColor);
-		deviceContext_p->ClearDepthStencilView(depthStencilView_p, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		deviceContext_p->OMSetRenderTargets(1, &renderTargetViews[RENDER_TARGET_VIEW::DEFAULT], depthStencilViews[DEPTH_STENCIL_VIEW::DEFAULT]);
+		deviceContext_p->ClearRenderTargetView(renderTargetViews[RENDER_TARGET_VIEW::DEFAULT], clearColor);
+		deviceContext_p->ClearDepthStencilView(depthStencilViews[DEPTH_STENCIL_VIEW::DEFAULT], D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		// set constant buffers
-		deviceContext_p->VSSetConstantBuffers(0, 1, &cbuffer_d3d_vs_p);
-		deviceContext_p->PSSetConstantBuffers(1, 1, &cbuffer_d3d_ps_p);
+		deviceContext_p->VSSetConstantBuffers(0, 1, &constantBuffers_vs_D3D[CONSTANT_BUFFER_VS::DEFAULT]);
+		deviceContext_p->PSSetConstantBuffers(1, 1, &constantBuffers_ps_D3D[CONSTANT_BUFFER_PS::DEFAULT]);
 
 		// set vertex shader constant buffer values
 		SetCurrentWorldMatrix(GetDefaultWorldMatrix());
@@ -568,18 +586,18 @@ namespace DirectXViewer
 		UpdateVSConstantBuffer();
 
 		// set pixel shader constant buffer values
-		cbuffer_ps.light_pos = light_pos;
-		cbuffer_ps.light_power = light_power;
-		cbuffer_ps.light_color = light_color;
-		cbuffer_ps.surface_shininess = surface_shininess;
+		constantBuffers_ps[CONSTANT_BUFFER_PS::DEFAULT].light_pos = light_pos;
+		constantBuffers_ps[CONSTANT_BUFFER_PS::DEFAULT].light_power = light_power;
+		constantBuffers_ps[CONSTANT_BUFFER_PS::DEFAULT].light_color = light_color;
+		constantBuffers_ps[CONSTANT_BUFFER_PS::DEFAULT].surface_shininess = surface_shininess;
 		UpdatePSConstantBuffer();
 
 		// set shaders
-		deviceContext_p->VSSetShader(shader_vertex_default_p, 0, 0);
-		deviceContext_p->PSSetShader(shader_pixel_default_p, 0, 0);
+		deviceContext_p->VSSetShader(shaders_vertex[SHADER_VERTEX::DEFAULT], 0, 0);
+		deviceContext_p->PSSetShader(shaders_pixel[SHADER_PIXEL::DEFAULT], 0, 0);
 
 		// set samplers
-		deviceContext_p->PSSetSamplers(0, 1, &samplerLinear_p);
+		deviceContext_p->PSSetSamplers(0, 1, &samplerStates[SAMPLER_STATE::LINEAR]);
 
 
 		// draw objects in scene if not disabled
@@ -597,9 +615,9 @@ namespace DirectXViewer
 			deviceContext_p->IASetPrimitiveTopology(DXV_PRIMITIVE_TOPOLOGY_DEBUG);
 
 
-			deviceContext_p->PSSetShader(shader_pixel_debug_p, nullptr, 0);
-			deviceContext_p->IASetVertexBuffers(0, 1, &vbuffer_debug_p, strides, offsets);
-			deviceContext_p->UpdateSubresource(vbuffer_debug_p, 0, NULL, DebugRenderer::get_line_verts(), 0, 0);
+			deviceContext_p->PSSetShader(shaders_pixel[SHADER_PIXEL::DEBUG], nullptr, 0);
+			deviceContext_p->IASetVertexBuffers(0, 1, &vertexBuffers[VERTEX_BUFFER::DEBUG], strides, offsets);
+			deviceContext_p->UpdateSubresource(vertexBuffers[VERTEX_BUFFER::DEBUG], 0, NULL, DebugRenderer::get_line_verts(), 0, 0);
 
 			SetDefaultWorldMatrix(XMMatrixIdentity());
 			UpdateVSConstantBuffer();
@@ -919,7 +937,7 @@ namespace DirectXViewer
 		desc.ComparisonFunc = _comp;
 		desc.MinLOD = _minLod;
 		desc.MaxLOD = _maxLod;
-		return device_p->CreateSamplerState(&desc, &samplerLinear_p);
+		return device_p->CreateSamplerState(&desc, _samplerState_pp);
 	}
 	HRESULT D3DCreateConstantBuffer(uint32_t _bytewidth, ID3D11Buffer** _cbuffer_pp)
 	{
@@ -962,8 +980,14 @@ namespace DirectXViewer
 		_viewport_p->MaxDepth = _maxDepth;
 	}
 
-	void UpdateVSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_vs_p, 0, nullptr, &cbuffer_vs, 0, 0); }
-	void UpdatePSConstantBuffer() { deviceContext_p->UpdateSubresource(cbuffer_d3d_ps_p, 0, nullptr, &cbuffer_ps, 0, 0); }
+	void inline UpdateVSConstantBuffer()
+	{ 
+		deviceContext_p->UpdateSubresource(constantBuffers_vs_D3D[CONSTANT_BUFFER_VS::DEFAULT], 0, nullptr, &constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT], 0, 0);
+	}
+	void inline UpdatePSConstantBuffer()
+	{
+		deviceContext_p->UpdateSubresource(constantBuffers_ps_D3D[CONSTANT_BUFFER_PS::DEFAULT], 0, nullptr, &constantBuffers_ps[CONSTANT_BUFFER_PS::DEFAULT], 0, 0);
+	}
 #pragma endregion
 
 #pragma region Debug Functions
@@ -982,6 +1006,10 @@ namespace DirectXViewer
 			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[1] * _scale), MAGENTA_RGBA_FLOAT32);
 			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[2] * _scale), YELLOW_RGBA_FLOAT32);
 		}
+	}
+	void debug_AddBoneToDebugRenderer(XMMATRIX _parent, XMMATRIX _child, XMFLOAT4 _color)
+	{
+
 	}
 	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::FRAME* _frame_p, XMMATRIX _position)
 	{
