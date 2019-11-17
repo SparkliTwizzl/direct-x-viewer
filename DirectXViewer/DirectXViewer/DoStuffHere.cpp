@@ -75,8 +75,8 @@ namespace DXVInterface
 	int32_t								xMouse_prev;
 	int32_t								yMouse_prev;
 
-	const float							camTranslationSpeed = 3.0f;
-	const float							camRotationSpeed = 0.15f;
+	const float							cam_TranslationSpeed = 3.0f;
+	const float							cam_RotationSpeed = 0.15f;
 #pragma endregion
 
 
@@ -147,8 +147,8 @@ namespace DXVInterface
 	{
 		XMMATRIX mView = XMMatrixInverse(nullptr, DirectXViewer::GetDefaultViewMatrix());
 
-		float t_camTranslationSpeed = camTranslationSpeed * _dt
-			, t_camRotationSpeed = camRotationSpeed * _dt;
+		float t_camTranslationSpeed = cam_TranslationSpeed * _dt
+			, t_camRotationSpeed = cam_RotationSpeed * _dt;
 
 		float dX = 0.0f
 			, dY = 0.0f
@@ -210,7 +210,7 @@ namespace DXVInterface
 		
 		DirectXViewer::D3DSetClearColor(clearColor);
 
-		XMVECTOR eye = { 0, 7, 7 };
+		XMVECTOR eye = { 0, 7, 10 };
 		XMVECTOR at = { 0, 3, 0 };
 		XMVECTOR up = { 0, 1, 0 };
 		DirectXViewer::SetDefaultViewMatrix(XMMatrixLookAtLH(eye, at, up));
