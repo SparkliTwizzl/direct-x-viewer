@@ -1,4 +1,4 @@
-#include <bitset>
+
 #include <fstream>
 #include <vector>
 
@@ -60,10 +60,10 @@ namespace DirectXViewer
 	XMFLOAT4X4						view;
 	XMFLOAT4X4						projection;
 
-	float							clearColor[4] = BLACK_RGBA_FLOAT32;
+	float							clearColor[4] = BLACK_RGBA_FLOAT;
 
 	XMFLOAT3						light_pos = { 0.0f, 5.0f, 5.0f };
-	XMFLOAT3						light_color = WHITE_RGB_FLOAT32;
+	XMFLOAT3						light_color = WHITE_RGB_FLOAT;
 	float							light_power = 10.0f;
 	float							light_rotationSpeed = 2.0f;
 
@@ -72,44 +72,8 @@ namespace DirectXViewer
 	std::vector<DXVOBJECT*>			sceneObjects;
 #pragma endregion
 
-#pragma region Input Variables
-#define INPUT_X_NEG 'A'
-#define INPUT_X_POS 'D'
-#define INPUT_Y_NEG VK_SHIFT
-#define INPUT_Y_POS VK_SPACE
-#define INPUT_Z_NEG 'S'
-#define INPUT_Z_POS 'W'
-
-	enum Inputs_e
-	{
-		CamTranslateXNeg = 0
-		, CamTranslateXPos
-		, CamTranslateYNeg
-		, CamTranslateYPos
-		, CamTranslateZNeg
-		, CamTranslateZPos
-		, CamRotate
-		, Count
-	};
-
-	std::bitset<Inputs_e::Count>	inputValues;
-
-	int32_t							xMouse;
-	int32_t							yMouse;
-	int32_t							xMouse_prev;
-	int32_t							yMouse_prev;
-
-	const float						camTranslationSpeed = 4.0f;
-	const float						camRotationSpeed = 0.1f;
-#pragma endregion
-
 
 #pragma region Private Helper Functions
-	// converters
-
-	XMFLOAT3 inline XMVectorToXMFloat3(XMVECTOR _v) { return { XMVectorGetX(_v), XMVectorGetY(_v), XMVectorGetZ(_v) }; }
-
-
 	// setters
 
 	// sets the inverse-transpose world matrix (used for normal vectors in shaders)
@@ -264,129 +228,6 @@ namespace DirectXViewer
 
 		return hr;
 	}
-
-
-	// update
-
-	float _GetTimeSinceLastUpdate()
-	{
-		static uint64_t startTime = 0;
-		static uint64_t prevTime = 0;
-		uint64_t curTime = GetTickCount64();
-		if (startTime == 0)
-			startTime = prevTime = curTime;
-		static float t = (curTime - startTime) / 1000.0f;
-		float dt = (curTime - prevTime) / 1000.0f;
-		prevTime = curTime;
-
-		return dt;
-	}
-	void _ReadInputs(const MSG* _msg)
-	{
-		// camera translation
-		if (_msg->message == WM_KEYDOWN || _msg->message == WM_KEYUP)
-		{
-			bool value = _msg->message == WM_KEYDOWN;
-
-			switch (_msg->wParam)
-			{
-			case INPUT_X_NEG:
-				inputValues.set(Inputs_e::CamTranslateXNeg, value);
-				break;
-			case INPUT_X_POS:
-				inputValues.set(Inputs_e::CamTranslateXPos, value);
-				break;
-			case INPUT_Y_NEG:
-				inputValues.set(Inputs_e::CamTranslateYNeg, value);
-				break;
-			case INPUT_Y_POS:
-				inputValues.set(Inputs_e::CamTranslateYPos, value);
-				break;
-			case INPUT_Z_NEG:
-				inputValues.set(Inputs_e::CamTranslateZNeg, value);
-				break;
-			case INPUT_Z_POS:
-				inputValues.set(Inputs_e::CamTranslateZPos, value);
-				break;
-			default:
-				break;
-			}
-		}
-
-		// camera rotation
-		if (_msg->message == WM_RBUTTONDOWN)
-		{
-			inputValues.set(Inputs_e::CamRotate, true);
-		}
-		if (_msg->message == WM_RBUTTONUP)
-		{
-			inputValues.set(Inputs_e::CamRotate, false);
-		}
-		if (_msg->message == WM_MOUSEMOVE)
-		{
-			xMouse_prev = xMouse;
-			yMouse_prev = yMouse;
-			xMouse = LOWORD(_msg->lParam);
-			yMouse = HIWORD(_msg->lParam);
-		}
-	}
-	void _UpdateCamera(float _dt)
-	{
-		XMMATRIX mView = XMMatrixInverse(nullptr, XMLoadFloat4x4(&view));
-
-		float t_camTranslationSpeed = camTranslationSpeed * _dt
-			, t_camRotationSpeed = camRotationSpeed * _dt;
-
-		float dX = 0.0f
-			, dY = 0.0f
-			, dZ = 0.0f
-			, drX = 0.0f
-			, drY = 0.0f;
-
-
-		// get translation amounts
-
-		// X
-		if (inputValues.test(Inputs_e::CamTranslateXNeg))
-			dX -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs_e::CamTranslateXPos))
-			dX += t_camTranslationSpeed;
-
-		// Y
-		if (inputValues.test(Inputs_e::CamTranslateYNeg))
-			dY -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs_e::CamTranslateYPos))
-			dY += t_camTranslationSpeed;
-
-		// Z
-		if (inputValues.test(Inputs_e::CamTranslateZNeg))
-			dZ -= t_camTranslationSpeed;
-		if (inputValues.test(Inputs_e::CamTranslateZPos))
-			dZ += t_camTranslationSpeed;
-
-
-		// apply translations
-		mView = ((XMMatrixTranslation(dX, 0, 0) * mView) * XMMatrixTranslation(0, dY, 0)) * XMMatrixTranslationFromVector(XMVector3Cross(mView.r[0], { 0, 1, 0 }) * dZ);
-
-
-		if (inputValues.test(Inputs_e::CamRotate))
-		{
-			// get rotation amounts
-			float camRotY = (float)(xMouse - xMouse_prev) * t_camRotationSpeed
-				, camRotX = (float)(yMouse - yMouse_prev) * t_camRotationSpeed;
-
-			// get view matrix offset from origin
-			XMVECTOR offset = { XMVectorGetX(mView.r[3]), XMVectorGetY(mView.r[3]), XMVectorGetZ(mView.r[3]) };
-
-			// temporarily shift view matrix to origin and apply rotations
-			mView = mView * XMMatrixTranslationFromVector(-offset);
-			mView = (XMMatrixRotationX(camRotX) * mView) * XMMatrixRotationY(camRotY);
-			mView = mView * XMMatrixTranslationFromVector(offset);
-		}
-
-
-		XMStoreFloat4x4(&view, XMMatrixInverse(nullptr, mView));
-	}
 #pragma endregion
 
 #pragma region Getters
@@ -496,17 +337,13 @@ namespace DirectXViewer
 
 		return hr;
 	}
-	void Update(const MSG* _msg)
+	void Update(const MSG* _msg, float _dt)
 	{
-		float dt = _GetTimeSinceLastUpdate();
-		_ReadInputs(_msg);
-		_UpdateCamera(dt);
 		DebugRenderer::clear_lines();
-
 
 		// orbit light around origin
 		XMVECTOR t_light_pos = { light_pos.x, light_pos.y, light_pos.z };
-		t_light_pos = (XMMatrixTranslationFromVector(t_light_pos) * XMMatrixRotationY(light_rotationSpeed * dt)).r[3];
+		t_light_pos = (XMMatrixTranslationFromVector(t_light_pos) * XMMatrixRotationY(light_rotationSpeed * _dt)).r[3];
 		light_pos = { XMVectorGetX(t_light_pos), XMVectorGetY(t_light_pos), XMVectorGetZ(t_light_pos) };
 	}
 	void Cleanup()
@@ -898,6 +735,20 @@ namespace DirectXViewer
 	}
 #pragma endregion
 
+#pragma region Conversion Functions
+	XMMATRIX Float4x4ToXMMatrix(float4x4 _m)
+	{
+		return
+		{
+			_m[0].x, _m[0].y, _m[0].z, _m[0].w,
+			_m[1].x, _m[1].y, _m[1].z, _m[1].w,
+			_m[2].x, _m[2].y, _m[2].z, _m[2].w,
+			_m[3].x, _m[3].y, _m[3].z, _m[3].w
+		};
+	}
+	XMFLOAT3 inline XMVectorToXMFloat3(XMVECTOR _v) { return { XMVectorGetX(_v), XMVectorGetY(_v), XMVectorGetZ(_v) }; }
+#pragma endregion
+
 #pragma region D3D Helper Functions
 	HRESULT D3DCreateDepthStencilView(uint32_t _w, uint32_t _h, ID3D11Texture2D** _depthStencil_pp, ID3D11DepthStencilView** _depthStencilView_pp)
 	{
@@ -996,24 +847,47 @@ namespace DirectXViewer
 		XMVECTOR matPos_v = _m.r[3];
 		XMFLOAT3 matPos_f = XMVectorToXMFloat3(matPos_v);
 
-		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[0] * _scale), RED_RGBA_FLOAT32);
-		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[1] * _scale), GREEN_RGBA_FLOAT32);
-		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[2] * _scale), BLUE_RGBA_FLOAT32);
+		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[0] * _scale), RED_RGBA_FLOAT);
+		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[1] * _scale), GREEN_RGBA_FLOAT);
+		DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v + _m.r[2] * _scale), BLUE_RGBA_FLOAT);
 
 		if (_showNegativeAxes)
 		{
-			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[0] * _scale), CYAN_RGBA_FLOAT32);
-			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[1] * _scale), MAGENTA_RGBA_FLOAT32);
-			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[2] * _scale), YELLOW_RGBA_FLOAT32);
+			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[0] * _scale), CYAN_RGBA_FLOAT);
+			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[1] * _scale), MAGENTA_RGBA_FLOAT);
+			DebugRenderer::add_line(matPos_f, XMVectorToXMFloat3(matPos_v - _m.r[2] * _scale), YELLOW_RGBA_FLOAT);
 		}
 	}
-	void debug_AddBoneToDebugRenderer(XMMATRIX _parent, XMMATRIX _child, XMFLOAT4 _color)
+	void debug_AddBoneToDebugRenderer(XMMATRIX _joint, XMMATRIX _parentJoint, bool _showJoint, XMFLOAT4 _color)
 	{
+		DebugRenderer::add_line(XMVectorToXMFloat3(_joint.r[3]), XMVectorToXMFloat3(_parentJoint.r[3]), _color);
 
+		if (_showJoint)
+			debug_AddMatrixToDebugRenderer(_joint, 0.25f);
 	}
-	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::FRAME* _frame_p, XMMATRIX _position)
+	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, DXVANIMATION::FRAME* _frame_p, XMMATRIX _offset)
 	{
+		for (uint32_t i = 0; i < _bindpose_p->joint_count; i++)
+		{
+			int parentIndex = _bindpose_p->joints[i].parent_index;
 
+			if (parentIndex >= 0)
+			{
+				XMMATRIX joint = DirectXViewer::Float4x4ToXMMatrix(_frame_p->transforms[i]) * _offset;
+				XMMATRIX parentJoint = DirectXViewer::Float4x4ToXMMatrix(_frame_p->transforms[parentIndex]) * _offset;
+
+				DirectXViewer::debug_AddBoneToDebugRenderer(joint, parentJoint, true);
+			}
+		}
+	}
+	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, XMMATRIX _offset)
+	{
+		DXVANIMATION::FRAME frame;
+		frame.transforms = new float4x4[_bindpose_p->joint_count];
+		for (uint32_t i = 0; i < _bindpose_p->joint_count; i++)
+			frame.transforms[i] = _bindpose_p->joints[i].global_transform;
+
+		debug_AddSkeletonToDebugRenderer(_bindpose_p, &frame, _offset);
 	}
 #pragma endregion
 

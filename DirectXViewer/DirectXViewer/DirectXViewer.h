@@ -439,7 +439,10 @@ namespace DirectXViewer
 
 	// Handles updates for automatically created D3D and DXV resources
 	// Additional updates must be done manually after this function is called
-	void Update(const MSG* _msg);
+	// PARAMETERS:
+	//   _msg	: Current window message
+	//   _dt	: Time since last update
+	void Update(const MSG* _msg, float _dt);
 
 	// Frees memory used by automatically created D3D and DXV resources
 	// Additional heap memory must be cleared manually before this function is called
@@ -567,6 +570,14 @@ namespace DirectXViewer
 	void UpdatePSConstantBuffer();
 #pragma endregion
 
+#pragma region Conversion Functions
+	// Converts a mathtypes float4x4 into an XMMATRIX
+	XMMATRIX Float4x4ToXMMatrix(float4x4 _m);
+
+	// Converts an XMVECTOR into an XMFLOAT3
+	XMFLOAT3 inline XMVectorToXMFloat3(XMVECTOR _v);
+#pragma endregion
+
 #pragma region Debug Functions
 	// Adds a matrix's axes to the debug renderer
 	// NOTES:
@@ -574,13 +585,15 @@ namespace DirectXViewer
 	//   Set _showNegativeAxes to true to draw negative axes in inverted colors
 	void debug_AddMatrixToDebugRenderer(XMMATRIX _m, float _scale = 1.0f, bool _showNegativeAxes = false);
 
-	// Adds a bone from an animation frame's skeleton to the debug renderer
-	void debug_AddBoneToDebugRenderer(XMMATRIX _parent, XMMATRIX _child, XMFLOAT4 _color = WHITE_RGBA_FLOAT32);
+	// Adds a bone (and optionally its joint) from an animation frame's skeleton to the debug renderer
+	void debug_AddBoneToDebugRenderer(XMMATRIX _joint, XMMATRIX _parentJoint, bool _showJoint = false, XMFLOAT4 _color = WHITE_RGBA_FLOAT);
 
 	// Adds an animation frame's bones and joints to the debug renderer
 	// NOTES:
-	//   Use _position matrix to set the position to render the skeleton at
-	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::FRAME* _frame_p, XMMATRIX _position = XMMatrixIdentity());
+	//   This function can use either the joints from a bindpose or the transforms from a frame depending on the overload
+	//   Use _offset matrix to adjust the position to render the skeleton at
+	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, DXVANIMATION::FRAME* _frame_p, XMMATRIX _offset = XMMatrixIdentity());
+	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, XMMATRIX _offset = XMMatrixIdentity());
 #pragma endregion
 
 
