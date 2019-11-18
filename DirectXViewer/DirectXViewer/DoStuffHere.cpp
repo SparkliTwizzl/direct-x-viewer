@@ -34,6 +34,7 @@ namespace DXVInterface
 	37920 B file
 	*/
 	DirectXViewer::DXVANIMATION*		testanim_p = nullptr;
+	int32_t								testanim_currFrame = 0;
 
 	DirectXViewer::DXVOBJECTDATA		testobjdata = {
 		testmesh_filename,
@@ -56,16 +57,19 @@ namespace DXVInterface
 #define INPUT_CAM_TRANS_Z_NEG 'S'
 #define INPUT_CAM_TRANS_Z_POS 'W'
 
-	enum INPUTS_CAMERA
+	struct INPUTS_CAMERA
 	{
-		TRANSLATE_X_NEG = 0
-		, TRANSLATE_X_POS
-		, TRANSLATE_Y_NEG
-		, TRANSLATE_Y_POS
-		, TRANSLATE_Z_NEG
-		, TRANSLATE_Z_POS
-		, ROTATE
-		, COUNT
+		enum
+		{
+			TRANSLATE_X_NEG = 0
+			, TRANSLATE_X_POS
+			, TRANSLATE_Y_NEG
+			, TRANSLATE_Y_POS
+			, TRANSLATE_Z_NEG
+			, TRANSLATE_Z_POS
+			, ROTATE
+			, COUNT
+		};
 	};
 
 	std::bitset<INPUTS_CAMERA::COUNT>	inputs_camera;
@@ -77,6 +81,31 @@ namespace DXVInterface
 
 	const float							cam_TranslationSpeed = 3.0f;
 	const float							cam_RotationSpeed = 0.15f;
+#pragma endregion
+
+#pragma region Animation Input Variables
+#define INPUT_ANIM_STEP_FWD VK_RIGHT
+#define INPUT_ANIM_STEP_BCK VK_LEFT
+#define INPUT_ANIM_PLAY VK_UP
+#define INPUT_ANIM_STOP VK_DOWN
+
+	struct INPUTS_ANIMATION
+	{
+		enum
+		{
+			STEP_FWD = 0
+			, STEP_BCK
+			, PLAY
+			, STOP
+			, COUNT
+		};
+	};
+
+	std::bitset<INPUTS_ANIMATION::COUNT>	inputs_animation;
+	bool									anim_playing = false;
+	bool									inputs_anim_pressed = false;
+	const float								inputs_anim_cooldown_length = 0.1f;
+	float									inputs_anim_cooldown = 0.0f;
 #pragma endregion
 
 
@@ -94,7 +123,7 @@ namespace DXVInterface
 
 		return dt;
 	}
-	void _ReadInputs(const MSG* _msg)
+	void _ReadCameraInputs(const MSG* _msg)
 	{
 		// camera translation
 		if (_msg->message == WM_KEYDOWN || _msg->message == WM_KEYUP)
@@ -203,6 +232,92 @@ namespace DXVInterface
 
 
 	// TODO: Add functions here
+	void _ReadAnimationInputs(const MSG* _msg)
+	{
+		if (!inputs_anim_pressed && _msg->message == WM_KEYDOWN)
+		{
+			switch (_msg->wParam)
+			{
+			case INPUT_ANIM_STEP_FWD:
+				inputs_animation.set(INPUTS_ANIMATION::STEP_FWD, true);
+				inputs_anim_pressed = true;
+				break;
+			case INPUT_ANIM_STEP_BCK:
+				inputs_animation.set(INPUTS_ANIMATION::STEP_BCK, true);
+				inputs_anim_pressed = true;
+				break;
+			case INPUT_ANIM_PLAY:
+				inputs_animation.set(INPUTS_ANIMATION::PLAY, true);
+				inputs_anim_pressed = true;
+				break;
+			case INPUT_ANIM_STOP:
+				inputs_animation.set(INPUTS_ANIMATION::STOP, true);
+				inputs_anim_pressed = true;
+				break;
+			default:
+				break;
+			}
+		}
+		else if (_msg->message == WM_KEYUP)
+		{
+			switch (_msg->wParam)
+			{
+			case INPUT_ANIM_STEP_FWD:
+				inputs_animation.set(INPUTS_ANIMATION::STEP_FWD, false);
+				break;
+			case INPUT_ANIM_STEP_BCK:
+				inputs_animation.set(INPUTS_ANIMATION::STEP_BCK, false);
+				break;
+			case INPUT_ANIM_PLAY:
+				inputs_animation.set(INPUTS_ANIMATION::PLAY, false);
+				break;
+			case INPUT_ANIM_STOP:
+				inputs_animation.set(INPUTS_ANIMATION::STOP, false);
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (!inputs_animation.test(INPUTS_ANIMATION::STEP_FWD)
+			&& !inputs_animation.test(INPUTS_ANIMATION::STEP_BCK)
+			&& !inputs_animation.test(INPUTS_ANIMATION::PLAY)
+			&& !inputs_animation.test(INPUTS_ANIMATION::STOP))
+			inputs_anim_pressed = false;
+	}
+
+	void _UpdateAnimation()
+	{
+		if (inputs_anim_cooldown <= 0.0f)
+		{
+			if (inputs_animation.test(INPUTS_ANIMATION::STEP_FWD))
+			{
+				inputs_anim_cooldown = inputs_anim_cooldown_length;
+				testanim_currFrame++;
+			}
+			else if (inputs_animation.test(INPUTS_ANIMATION::STEP_BCK))
+			{
+				inputs_anim_cooldown = inputs_anim_cooldown_length;
+				testanim_currFrame--;
+			}
+			else if (inputs_animation.test(INPUTS_ANIMATION::PLAY))
+			{
+				inputs_anim_cooldown = inputs_anim_cooldown_length;
+				anim_playing = true;
+			}
+			else if (inputs_animation.test(INPUTS_ANIMATION::STOP))
+			{
+				inputs_anim_cooldown = inputs_anim_cooldown_length;
+				anim_playing = false;
+			}
+		}
+
+		while (testanim_currFrame < 0)
+			testanim_currFrame += testanim_p->frame_count;
+
+		while (testanim_currFrame >= testanim_p->frame_count)
+			testanim_currFrame -= testanim_p->frame_count;
+	}
 
 	HRESULT ManualInit()
 	{
@@ -225,9 +340,15 @@ namespace DXVInterface
 
 		return hr;
 	}
-	void ManualUpdate()
+	void ManualUpdate(const MSG* _msg, float _dt)
 	{
-		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->keyframes[0], XMMatrixTranslation(2, 0, 0));
+		if (inputs_anim_cooldown > 0.0f)
+			inputs_anim_cooldown -= _dt;
+
+		_ReadAnimationInputs(_msg);
+		_UpdateAnimation();
+
+		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->keyframes[testanim_currFrame], XMMatrixTranslation(2, 0, 0));
 	}
 	void ManualDraw()
 	{
@@ -267,11 +388,11 @@ namespace DXVInterface
 		float dt = _GetTimeSinceLastUpdate();
 		DirectXViewer::Update(_msg, dt);
 
-		_ReadInputs(_msg);
+		_ReadCameraInputs(_msg);
 		_UpdateCamera(dt);
 
 		// TODO: Add update code here
-		ManualUpdate();
+		ManualUpdate(_msg, dt);
 
 		// TODO: Add draw code here
 		ManualDraw();
