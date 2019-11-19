@@ -1,4 +1,3 @@
-
 #include <fstream>
 #include <vector>
 
@@ -118,6 +117,15 @@ namespace DirectXViewer
 
 		return hr;
 	}
+	HRESULT _CreateDepthStencils()
+	{
+		HRESULT hr;
+
+		hr = D3DCreateDepthStencilView(windowWidth, windowHeight, &depthStencils[DEPTH_STENCIL::DEFAULT], &depthStencilViews[DEPTH_STENCIL_VIEW::DEFAULT]);
+		if (FAILED(hr)) return hr;
+
+		return hr;
+	}
 	HRESULT _CreateInputLayouts()
 	{
 		HRESULT hr;
@@ -131,6 +139,15 @@ namespace DirectXViewer
 		};
 		UINT numInputElements = ARRAYSIZE(inputElementDesc);
 		hr = device_p->CreateInputLayout(inputElementDesc, numInputElements, vertexshader_default, sizeof(vertexshader_default), &vertexLayouts[VERTEX_LAYOUT::DEFAULT]);
+
+		return hr;
+	}
+	HRESULT _CreateSamplerStates()
+	{
+		HRESULT hr;
+
+		hr = D3DCreateSamplerState(&samplerStates[SAMPLER_STATE::LINEAR], D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+		if (FAILED(hr)) return hr;
 
 		return hr;
 	}
@@ -184,7 +201,7 @@ namespace DirectXViewer
 		hr = _CreateRenderTargetViews();
 		if (FAILED(hr)) return hr;
 
-		hr = D3DCreateDepthStencilView(windowWidth, windowHeight, &depthStencils[DEPTH_STENCIL::DEFAULT], &depthStencilViews[DEPTH_STENCIL_VIEW::DEFAULT]);
+		hr = _CreateDepthStencils();
 		if (FAILED(hr)) return hr;
 
 		hr = _CreateInputLayouts();
@@ -192,7 +209,7 @@ namespace DirectXViewer
 
 		deviceContext_p->IASetInputLayout(vertexLayouts[VERTEX_LAYOUT::DEFAULT]);
 
-		hr = D3DCreateSamplerState(&samplerStates[SAMPLER_STATE::LINEAR], D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+		hr = _CreateSamplerStates();
 		if (FAILED(hr)) return hr;
 
 		hr = _CreateVertexBuffers();
@@ -256,6 +273,8 @@ namespace DirectXViewer
 	}
 	void SetCurrentViewMatrix(XMMATRIX _m) { constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].view = _m; }
 	void SetCurrentProjectionMatrix(XMMATRIX _m) { constantBuffers_vs[CONSTANT_BUFFER_VS::DEFAULT].projection = _m; }
+
+	void SetSurfaceShininess(float _s) { constantBuffers_ps[CONSTANT_BUFFER_VS::DEFAULT].surface_shininess = _s; }
 
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp) { deviceContext_p->IASetVertexBuffers(0, 1, _vbuffer_pp, strides, offsets); }
 	void D3DSetIndexBuffer(ID3D11Buffer* _ibuffer_p) { deviceContext_p->IASetIndexBuffer(_ibuffer_p, IBUFFER_FORMAT, 0); }
@@ -609,32 +628,37 @@ namespace DirectXViewer
 	{
 		HRESULT hr;
 
-		DXVMATERIAL* material_p = new DXVMATERIAL;
-
-		// copy data
-		for (uint32_t c = 0; c < DXVMATERIAL::ComponentType_e::Count; c++)
+		if (_matdata_p == nullptr)
+			errormsg = "Uninitialized DXVMATERIALDATA* passed to DXVCreateMaterial";
+		else
 		{
-			material_p->components[c].value = _matdata_p->components[c].value;
-			material_p->components[c].factor = _matdata_p->components[c].factor;
+			DXVMATERIAL* material_p = new DXVMATERIAL;
 
-			const wchar_t* prefix = L"assets/";
-			wchar_t partialpath[260];
-			MultiByteToWideChar(CP_ACP, 0, _matdata_p->components[c].filepath, -1, (LPWSTR)partialpath, 260);
-
-			wchar_t filepath[267];
-			memcpy(&filepath[0], prefix, 7 * sizeof(wchar_t));
-			memcpy(&filepath[7], partialpath, 260 * sizeof(wchar_t));
-
-			hr = CreateWICTextureFromFile(device_p, filepath, &material_p->components[c].texture_p, &material_p->components[c].textureView_p);
-			if (FAILED(hr))
+			// copy data
+			for (uint32_t c = 0; c < DXVMATERIAL::ComponentType_e::Count; c++)
 			{
-				errormsg = "Failed to create WIC texture from file";
-				return hr;
+				material_p->components[c].value = _matdata_p->components[c].value;
+				material_p->components[c].factor = _matdata_p->components[c].factor;
+
+				const wchar_t* prefix = L"assets/";
+				wchar_t partialpath[260];
+				MultiByteToWideChar(CP_ACP, 0, _matdata_p->components[c].filepath, -1, (LPWSTR)partialpath, 260);
+
+				wchar_t filepath[267];
+				memcpy(&filepath[0], prefix, 7 * sizeof(wchar_t));
+				memcpy(&filepath[7], partialpath, 260 * sizeof(wchar_t));
+
+				hr = CreateWICTextureFromFile(device_p, filepath, &material_p->components[c].texture_p, &material_p->components[c].textureView_p);
+				if (FAILED(hr))
+				{
+					errormsg = "Failed to create WIC texture from file";
+					return hr;
+				}
 			}
+
+
+			*_material_pp = material_p;
 		}
-
-
-		*_material_pp = material_p;
 
 		return hr;
 		//return S_OK;
@@ -649,7 +673,7 @@ namespace DirectXViewer
 		return DXVCreateMaterial(*_matdata_pp, _material_pp);
 	}
 
-	HRESULT DXVLoadAnimation(const char* _filepath, DXVANIMATION** _animation_pp)
+	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp)
 	{
 		HRESULT hr;
 		std::fstream fin;
@@ -657,49 +681,117 @@ namespace DirectXViewer
 		hr = _OpenFile(_filepath, &fin);
 		if (FAILED(hr)) return hr;
 
-		DXVANIMATION* animation_p = new DXVANIMATION;
+		DXVANIMATIONDATA* animdata_p = new DXVANIMATIONDATA;
 
 		// load data from file
 		uint32_t numJoints = 0;
 		uint32_t numFrames = 0;
 
-		// write bind pose to file with format:
-		//   uint32_t : number of joints
+		// read joint count
 		fin.read((char*)&numJoints, sizeof(numJoints));
-		animation_p->bind_pose.joint_count = numJoints;
-		//   { float[16], int }[numJoints] : joint data
-		animation_p->bind_pose.joints = new DXVANIMATION::JOINT[numJoints];
-		fin.read((char*)&animation_p->bind_pose.joints[0], numJoints * sizeof(DXVANIMATION::JOINT));
+		animdata_p->bind_pose.joint_count = numJoints;
 
-		// write animation clip to file with format:
-		//   double	: animation duration in seconds
-		fin.read((char*)&animation_p->duration, sizeof(animation_p->duration));
-		//   uint32_t : byte length of each frame
-		fin.read((char*)&animation_p->frame_byte_length, sizeof(animation_p->frame_byte_length));
-		//   uint32_t : number of frames
+		// read bind pose joints
+		animdata_p->bind_pose.joints = new DXVANIMATIONDATA::BINDPOSE::JOINT[numJoints];
+		fin.read((char*)&animdata_p->bind_pose.joints[0], numJoints * sizeof(DXVANIMATIONDATA::BINDPOSE::JOINT));
+
+		// read animation duration
+		fin.read((char*)&animdata_p->duration, sizeof(animdata_p->duration));
+
+		// read animation frame byte length
+		fin.read((char*)&animdata_p->frame_byte_length, sizeof(animdata_p->frame_byte_length));
+
+		// read frame count
 		fin.read((char*)&numFrames, sizeof(numFrames));
-		animation_p->frame_count = numFrames;
-		//   { double, float[16][numJoints] }[numFrames] : frame data
-		animation_p->keyframes = new DXVANIMATION::FRAME[numFrames];
+		animdata_p->frame_count = numFrames;
+
+		// read keyframe data
+		animdata_p->frames = new DXVANIMATIONDATA::FRAME[numFrames];
 		for (uint32_t i = 0; i < numFrames; i++)
 		{
-			animation_p->keyframes[i].transforms = new float4x4[numJoints];
-			fin.read((char*)&animation_p->keyframes[i].time, sizeof(DXVANIMATION::FRAME::time));
-			fin.read((char*)&animation_p->keyframes[i].transforms[0], animation_p->frame_byte_length - sizeof(DXVANIMATION::FRAME::time));
+			animdata_p->frames[i].transforms = new float4x4[numJoints];
+			fin.read((char*)&animdata_p->frames[i].time, sizeof(DXVANIMATIONDATA::FRAME::time));
+			fin.read((char*)&animdata_p->frames[i].transforms[0], animdata_p->frame_byte_length - sizeof(DXVANIMATIONDATA::FRAME::time));
 		}
 
 
 		// store loaded data
-		*_animation_pp = animation_p;
+		*_animdata_pp = animdata_p;
 
 		return hr;
+	}
+	HRESULT DXVCreateAnimation(DXVANIMATIONDATA* _animdata_p, DXVANIMATION** _animation_pp)
+	{
+		HRESULT hr = E_INVALIDARG;
+
+		if (_animdata_p == nullptr)
+			errormsg = "Uninitialized DXVANIMATIONDATA* passed to DXVCreateAnimation";
+		else
+		{
+			DXVANIMATION* animation_p = new DXVANIMATION;
+
+			// copy joint count
+			uint32_t numJoints = _animdata_p->bind_pose.joint_count;
+			animation_p->bind_pose.joint_count = numJoints;
+
+			// copy bind pose joints
+			animation_p->bind_pose.joints = new DXVANIMATION::BINDPOSE::JOINT[numJoints];
+			for (uint32_t i = 0; i < numJoints; i++)
+			{
+				animation_p->bind_pose.joints[i].global_transform = Float4x4ToXMMatrix(_animdata_p->bind_pose.joints[i].global_transform);
+				animation_p->bind_pose.joints[i].parent_index = _animdata_p->bind_pose.joints[i].parent_index;
+			}
+
+			// copy duration
+			animation_p->duration = _animdata_p->duration;
+
+			// copy frame count
+			uint32_t numFrames = _animdata_p->frame_count;
+			animation_p->frame_count = numFrames;
+
+			// copy frame data
+			animation_p->frames = new DXVANIMATION::FRAME[numFrames];
+
+			for (uint32_t i = 0; i < numFrames; i++)
+			{
+				// copy time
+				animation_p->frames[i].time = _animdata_p->frames[i].time;
+
+				// copy transforms
+				animation_p->frames[i].transforms = new DXVTRANSFORM[numJoints];
+				for (uint32_t t = 0; t < numJoints; t++)
+				{
+					// convert transform matrix
+					XMMATRIX transform = Float4x4ToXMMatrix(_animdata_p->frames[i].transforms[t]);
+
+					// store transform
+					animation_p->frames[i].transforms[t] = XMMatrixToDXVTransform(transform);
+				}
+			}
+
+			hr = S_OK;
+
+
+			*_animation_pp = animation_p;
+		}
+
+		return hr;
+	}
+	HRESULT DXVLoadAndCreateAnimation(const char* _filepath, DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp)
+	{
+		HRESULT hr;
+
+		hr = DXVLoadAnimationData(_filepath, _animdata_pp);
+		if (FAILED(hr)) return hr;
+
+		return DXVCreateAnimation(*_animdata_pp, _animation_pp);
 	}
 
 	HRESULT DXVLoadAndCreateObject(
 		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
 		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
-		DXVANIMATION** _animation_pp,
+		DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp,
 		DXVOBJECT* _object_p)
 	{
 		HRESULT hr;
@@ -710,7 +802,7 @@ namespace DirectXViewer
 		hr = DXVLoadAndCreateMaterial(_mat_filepath, _matdata_pp, _material_pp);
 		if (FAILED(hr)) return hr;
 
-		hr = DXVLoadAnimation(_anim_filepath, _animation_pp);
+		hr = DXVLoadAndCreateAnimation(_anim_filepath, _animdata_pp, _animation_pp);
 		if (FAILED(hr)) return hr;
 
 		_object_p->mesh_p = *_mesh_pp;
@@ -718,6 +810,21 @@ namespace DirectXViewer
 		_object_p->animation_p = *_animation_pp;
 
 		return hr;
+	}
+
+	DXVANIMATION::FRAME DXVInterpolateAnimationFrames(uint32_t _numJoints, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, float _r)
+	{
+		DXVANIMATION::FRAME frame = {};
+		frame.transforms = new DXVTRANSFORM[_numJoints];
+
+		frame.time = lerp(_a.time, _b.time, _r);
+
+		for (uint32_t i = 0; i < _numJoints; i++)
+		{
+
+		}
+
+		return frame;
 	}
 #pragma endregion
 
@@ -736,7 +843,25 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Conversion Functions
-	XMMATRIX Float4x4ToXMMatrix(float4x4 _m)
+	DXVTRANSFORM XMMatrixToDXVTransform(XMMATRIX _m)
+	{
+		DXVTRANSFORM t = {};
+
+		t.translation = _m.r[3];
+		_m.r[3] = { 0, 0, 0, 1 };
+		t.rotation = XMQuaternionRotationMatrix(_m);
+
+		return t;
+	}
+
+	XMMATRIX DXVTransformToXMMatrix(DXVTRANSFORM _t)
+	{
+		XMMATRIX m = XMMatrixRotationQuaternion(_t.rotation);
+		m.r[3] = _t.translation;
+
+		return m;
+	}
+	XMMATRIX inline Float4x4ToXMMatrix(float4x4 _m)
 	{
 		return
 		{
@@ -746,7 +871,12 @@ namespace DirectXViewer
 			_m[3].x, _m[3].y, _m[3].z, _m[3].w
 		};
 	}
+
 	XMFLOAT3 inline XMVectorToXMFloat3(XMVECTOR _v) { return { XMVectorGetX(_v), XMVectorGetY(_v), XMVectorGetZ(_v) }; }
+#pragma endregion
+
+#pragma region Math Functions
+	double inline lerp(double _a, double _b, double _r) { return (_b - _a) * _r + _a; }
 #pragma endregion
 
 #pragma region D3D Helper Functions
@@ -873,8 +1003,8 @@ namespace DirectXViewer
 
 			if (parentIndex >= 0)
 			{
-				XMMATRIX joint = DirectXViewer::Float4x4ToXMMatrix(_frame_p->transforms[i]) * _offset;
-				XMMATRIX parentJoint = DirectXViewer::Float4x4ToXMMatrix(_frame_p->transforms[parentIndex]) * _offset;
+				XMMATRIX joint = DXVTransformToXMMatrix(_frame_p->transforms[i]) * _offset;
+				XMMATRIX parentJoint = DXVTransformToXMMatrix(_frame_p->transforms[parentIndex]) * _offset;
 
 				DirectXViewer::debug_AddBoneToDebugRenderer(joint, parentJoint, true);
 			}
@@ -883,9 +1013,9 @@ namespace DirectXViewer
 	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, XMMATRIX _offset)
 	{
 		DXVANIMATION::FRAME frame;
-		frame.transforms = new float4x4[_bindpose_p->joint_count];
+		frame.transforms = new DXVTRANSFORM[_bindpose_p->joint_count];
 		for (uint32_t i = 0; i < _bindpose_p->joint_count; i++)
-			frame.transforms[i] = _bindpose_p->joints[i].global_transform;
+			frame.transforms[i] = XMMatrixToDXVTransform(_bindpose_p->joints[i].global_transform);
 
 		debug_AddSkeletonToDebugRenderer(_bindpose_p, &frame, _offset);
 	}

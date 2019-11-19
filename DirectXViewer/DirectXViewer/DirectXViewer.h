@@ -155,6 +155,13 @@ namespace DirectXViewer
 		XMFLOAT2 uv;
 	};
 
+	// DXV translation/rotation transform data container
+	struct DXVTRANSFORM
+	{
+		XMVECTOR translation; // vector
+		XMVECTOR rotation; // quaternion
+	};
+
 	// DXV mesh data container
 	struct DXVMESHDATA
 	{
@@ -249,17 +256,17 @@ namespace DirectXViewer
 		COMPONENT components[ComponentType_e::Count];
 	};
 
-	// DXV animation
-	struct DXVANIMATION
+	// DXV animation data container
+	struct DXVANIMATIONDATA
 	{
-		struct JOINT
-		{
-			float4x4	global_transform = {};
-			int32_t		parent_index = -1;
-		};
-
 		struct BINDPOSE
 		{
+			struct JOINT
+			{
+				float4x4	global_transform = {};
+				int32_t		parent_index = -1;
+			};
+
 			uint32_t	joint_count = 0;
 			JOINT*		joints = nullptr;
 
@@ -280,33 +287,76 @@ namespace DirectXViewer
 			}
 		};
 
-		double		duration = 0.0f;
-		double		playback_speed = 1.0f;
 		BINDPOSE	bind_pose;
+		double		duration = 0.0f;
 		uint32_t	frame_byte_length = 0;
 		uint32_t	frame_count = 0;
-		FRAME*		keyframes = nullptr;
+		FRAME*		frames = nullptr;
+
+		~DXVANIMATIONDATA()
+		{
+			delete[] frames;
+		}
+	};
+
+	// DXV runtime animation
+	struct DXVANIMATION
+	{
+		struct BINDPOSE
+		{
+			struct JOINT
+			{
+				XMMATRIX	global_transform = {};
+				int32_t		parent_index = -1;
+			};
+
+			uint32_t	joint_count = 0;
+			JOINT*		joints = nullptr;
+
+			~BINDPOSE()
+			{
+				delete[] joints;
+			}
+		};
+
+		struct FRAME
+		{
+			double			time = 0.0f;
+			DXVTRANSFORM*	transforms = nullptr;
+
+			~FRAME()
+			{
+				delete[] transforms;
+			}
+		};
+
+		BINDPOSE	bind_pose;
+		double		playback_speed = 1.0f;
+		double		duration = 0.0f;
+		uint32_t	frame_count = 0;
+		FRAME*		frames = nullptr;
 
 		~DXVANIMATION()
 		{
-			delete[] keyframes;
+			delete[] frames;
 		}
 	};
 
 	// DXV object data container
 	struct DXVOBJECTDATA
 	{
-		const char*			mesh_filepath;
-		const char*			material_filepath;
-		const char*			animation_filepath;
+		const char*				mesh_filepath;
+		const char*				material_filepath;
+		const char*				animation_filepath;
 
-		DXVMESHDATA**		meshdata_pp = nullptr;
-		DXVMESH**			mesh_pp = nullptr;
+		DXVMESHDATA**			meshdata_pp = nullptr;
+		DXVMESH**				mesh_pp = nullptr;
 
-		DXVMATERIALDATA**	materialdata_pp = nullptr;
-		DXVMATERIAL**		material_pp = nullptr;
+		DXVMATERIALDATA**		materialdata_pp = nullptr;
+		DXVMATERIAL**			material_pp = nullptr;
 
-		DXVANIMATION**		animation_pp = nullptr;
+		DXVANIMATIONDATA**		animdata_pp = nullptr;
+		DXVANIMATION**			animation_pp = nullptr;
 
 		~DXVOBJECTDATA()
 		{
@@ -314,6 +364,7 @@ namespace DirectXViewer
 			mesh_pp = nullptr;
 			materialdata_pp = nullptr;
 			material_pp = nullptr;
+			animdata_pp = nullptr;
 			animation_pp = nullptr;
 		}
 	};
@@ -327,6 +378,7 @@ namespace DirectXViewer
 		DXVMESH*		mesh_p = nullptr;
 		DXVMATERIAL*	material_p = nullptr;
 		DXVANIMATION*	animation_p = nullptr;
+		float			anim_time;
 
 		~DXVOBJECT()
 		{
@@ -400,6 +452,10 @@ namespace DirectXViewer
 	void SetCurrentProjectionMatrix(XMMATRIX _m);
 
 
+	// Sets the surface shininess for specular highlights
+	void SetSurfaceShininess(float _s);
+
+
 	// Sets the current D3D vertex buffer
 	void D3DSetVertexBuffer(ID3D11Buffer** _vbuffer_pp);
 
@@ -469,7 +525,7 @@ namespace DirectXViewer
 	void D3DDrawIndexed(uint32_t _numInds);
 #pragma endregion
 
-#pragma region Mesh/Material/Animation/Object Functions
+#pragma region Mesh Functions
 	// Loads mesh data from file into a DXVMESHDATA
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp);
 
@@ -478,8 +534,9 @@ namespace DirectXViewer
 
 	// Loads mesh data from file into a DXVMESHDATA and creates a DXVMESH from it
 	HRESULT DXVLoadAndCreateMesh(const char* _filepath, DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp);
+#pragma endregion
 
-
+#pragma region Material Functions
 	// Loads material data from file into a DXVMATERIALDATA
 	// NOTES:
 	//  If the .mat file passed in contains multiple materials, this function will return an array of DXVMATERIALDATAs
@@ -492,19 +549,31 @@ namespace DirectXViewer
 	// NOTES:
 	//  Should only be used for .mat files with only one material in them
 	HRESULT DXVLoadAndCreateMaterial(const char* _filepath, DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp);
+#pragma endregion
 
-
+#pragma region Animation Functions
 	// Loads animation data from file into a DXVANIMATIONDATA
-	HRESULT DXVLoadAnimation(const char* _filepath, DXVANIMATION** _animation_pp);
+	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp);
+
+	// Creats and stores a DXVANIMATION from a DXVANIMATIONDATA
+	HRESULT DXVCreateAnimation(DXVANIMATIONDATA* _animdata_p, DXVANIMATION** _animaition_pp);
+
+	// Loads animation data from file into a DXVANIMATIONDATA and creats a DXVANIMATION from it
+	HRESULT DXVLoadAndCreateAnimation(const char* _filepath, DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animaition_pp);
 
 
+	// Interpolates positions and rotations of joints in animation frames
+	DXVANIMATIONDATA::FRAME DXVInterpolateAnimationFrames(uint32_t _numJoints, DXVANIMATIONDATA::FRAME _a, DXVANIMATIONDATA::FRAME _b, float _r);
+#pragma endregion
+
+#pragma region Object Functions
 	// Loads mesh, material, and animation data, creats a DXVMESDH, DXVMATERIAL, and DXVANIMATION,
 	// and stores them in the passed in DXVOBJECT
 	HRESULT DXVLoadAndCreateObject(
 		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
 		DXVMATERIALDATA** _matdata_pp, DXVMATERIAL** _material_pp,
-		DXVANIMATION** _animation_pp,
+		DXVANIMATIONDATA** _animdata_pp, DXVANIMATION** _animation_pp,
 		DXVOBJECT* _object_p);
 
 	// Loads mesh, material, and animation data, creats a DXVMESDH, DXVMATERIAL, and DXVANIMATION,
@@ -513,7 +582,7 @@ namespace DirectXViewer
 	{
 		return DXVLoadAndCreateObject(_objdata.mesh_filepath, _objdata.material_filepath, _objdata.animation_filepath,
 			_objdata.meshdata_pp, _objdata.mesh_pp, _objdata.materialdata_pp, _objdata.material_pp,
-			_objdata.animation_pp, _object_p);
+			_objdata.animdata_pp, _objdata.animation_pp, _object_p);
 	}
 #pragma endregion
 
@@ -571,11 +640,24 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Conversion Functions
+	// Convets an XMMATRIX into a DXVTRANSFORM
+	DXVTRANSFORM XMMatrixToDXVTransform(XMMATRIX _m);
+
+
+	// Converts a DXVTRANSFORM into an XMMATRIX
+	XMMATRIX DXVTransformToXMMatrix(DXVTRANSFORM _t);
+
 	// Converts a mathtypes float4x4 into an XMMATRIX
-	XMMATRIX Float4x4ToXMMatrix(float4x4 _m);
+	XMMATRIX inline Float4x4ToXMMatrix(float4x4 _m);
+
 
 	// Converts an XMVECTOR into an XMFLOAT3
 	XMFLOAT3 inline XMVectorToXMFloat3(XMVECTOR _v);
+#pragma endregion
+
+#pragma region Math Functions
+	// Linear interpolation
+	double inline lerp(double _a, double _b, double _r);
 #pragma endregion
 
 #pragma region Debug Functions
@@ -588,9 +670,9 @@ namespace DirectXViewer
 	// Adds a bone (and optionally its joint) from an animation frame's skeleton to the debug renderer
 	void debug_AddBoneToDebugRenderer(XMMATRIX _joint, XMMATRIX _parentJoint, bool _showJoint = false, XMFLOAT4 _color = WHITE_RGBA_FLOAT);
 
-	// Adds an animation frame's bones and joints to the debug renderer
+	// Adds a DXVANIMATION's bones and joints to the debug renderer
 	// NOTES:
-	//   This function can use either the joints from a bindpose or the transforms from a frame depending on the overload
+	//   This function will use the transforms from a frame if one is provided, or the joints from a bindpose if one is not
 	//   Use _offset matrix to adjust the position to render the skeleton at
 	//   Pass a DXVOBJECT's model matrix as _offset to render a skeleton at its position
 	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, DXVANIMATION::FRAME* _frame_p, XMMATRIX _offset = XMMatrixIdentity());

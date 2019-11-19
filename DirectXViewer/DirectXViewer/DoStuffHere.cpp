@@ -33,6 +33,7 @@ namespace DXVInterface
 	20 frames
 	37920 B file
 	*/
+	DirectXViewer::DXVANIMATIONDATA*	testanimdata_p = nullptr;
 	DirectXViewer::DXVANIMATION*		testanim_p = nullptr;
 	int32_t								testanim_currFrame = 0;
 
@@ -44,18 +45,19 @@ namespace DXVInterface
 		&testmesh_p,
 		&testmatdata_p,
 		&testmat_p,
+		&testanimdata_p,
 		&testanim_p
 	};
 	DirectXViewer::DXVOBJECT			testobj;
 #pragma endregion
 
 #pragma region Camera Input Variables
-#define INPUT_CAM_TRANS_X_NEG 'A'
-#define INPUT_CAM_TRANS_X_POS 'D'
-#define INPUT_CAM_TRANS_Y_NEG VK_SHIFT
-#define INPUT_CAM_TRANS_Y_POS VK_SPACE
-#define INPUT_CAM_TRANS_Z_NEG 'S'
-#define INPUT_CAM_TRANS_Z_POS 'W'
+#define INPUT_CAM_TRANS_X_NEG	'A'
+#define INPUT_CAM_TRANS_X_POS	'D'
+#define INPUT_CAM_TRANS_Y_NEG	VK_SHIFT
+#define INPUT_CAM_TRANS_Y_POS	VK_SPACE
+#define INPUT_CAM_TRANS_Z_NEG	'S'
+#define INPUT_CAM_TRANS_Z_POS	'W'
 
 	struct INPUTS_CAMERA
 	{
@@ -84,11 +86,13 @@ namespace DXVInterface
 #pragma endregion
 
 #pragma region Animation Input Variables
-#define INPUT_ANIM_STEP_FWD VK_RIGHT
-#define INPUT_ANIM_STEP_BCK VK_LEFT
-#define INPUT_ANIM_PLAY VK_UP
-#define INPUT_ANIM_STOP VK_DOWN
-
+#define INPUT_ANIM_STEP_FWD		VK_OEM_PERIOD
+#define INPUT_ANIM_STEP_BCK		VK_OEM_COMMA
+#define INPUT_ANIM_PLAY			VK_RIGHT
+#define INPUT_ANIM_STOP			VK_LEFT
+#define INPUT_ANIM_SPD_UP		VK_UP
+#define INPUT_ANIM_SPD_DOWN		VK_DOWN
+#define INPUT_ANIM_SPD_RESET	'0'
 	struct INPUTS_ANIMATION
 	{
 		enum
@@ -97,15 +101,21 @@ namespace DXVInterface
 			, STEP_BCK
 			, PLAY
 			, STOP
+			, SPD_UP
+			, SPD_DOWN
+			, SPD_RESET
 			, COUNT
 		};
 	};
 
 	std::bitset<INPUTS_ANIMATION::COUNT>	inputs_animation;
-	bool									anim_playing = false;
+
 	bool									inputs_anim_pressed = false;
 	const float								inputs_anim_cooldown_length = 0.1f;
 	float									inputs_anim_cooldown = 0.0f;
+
+	bool									anim_playing = false;
+	const float								anim_playbackSpeedStepAmount = 0.1f;
 #pragma endregion
 
 
@@ -234,6 +244,7 @@ namespace DXVInterface
 	// TODO: Add functions here
 	void _ReadAnimationInputs(const MSG* _msg)
 	{
+		// set animation inputs active if pressed
 		if (!inputs_anim_pressed && _msg->message == WM_KEYDOWN)
 		{
 			switch (_msg->wParam)
@@ -254,10 +265,23 @@ namespace DXVInterface
 				inputs_animation.set(INPUTS_ANIMATION::STOP, true);
 				inputs_anim_pressed = true;
 				break;
+			case INPUT_ANIM_SPD_UP:
+				inputs_animation.set(INPUTS_ANIMATION::SPD_UP, true);
+				inputs_anim_pressed = true;
+				break;
+			case INPUT_ANIM_SPD_DOWN:
+				inputs_animation.set(INPUTS_ANIMATION::SPD_DOWN, true);
+				inputs_anim_pressed = true;
+				break;
+			case INPUT_ANIM_SPD_RESET:
+				inputs_animation.set(INPUTS_ANIMATION::SPD_RESET, true);
+				inputs_anim_pressed = true;
+				break;
 			default:
 				break;
 			}
 		}
+		// set animation inputs inactive if not pressed
 		else if (_msg->message == WM_KEYUP)
 		{
 			switch (_msg->wParam)
@@ -274,49 +298,84 @@ namespace DXVInterface
 			case INPUT_ANIM_STOP:
 				inputs_animation.set(INPUTS_ANIMATION::STOP, false);
 				break;
+			case INPUT_ANIM_SPD_UP:
+				inputs_animation.set(INPUTS_ANIMATION::SPD_UP, false);
+				break;
+			case INPUT_ANIM_SPD_DOWN:
+				inputs_animation.set(INPUTS_ANIMATION::SPD_DOWN, false);
+				break;
+			case INPUT_ANIM_SPD_RESET:
+				inputs_animation.set(INPUTS_ANIMATION::SPD_RESET, false);
+				break;
 			default:
 				break;
 			}
 		}
 
-		if (!inputs_animation.test(INPUTS_ANIMATION::STEP_FWD)
-			&& !inputs_animation.test(INPUTS_ANIMATION::STEP_BCK)
-			&& !inputs_animation.test(INPUTS_ANIMATION::PLAY)
-			&& !inputs_animation.test(INPUTS_ANIMATION::STOP))
-			inputs_anim_pressed = false;
+		// reset input pressed flag if no animation input is active
+		inputs_anim_pressed = !(
+			inputs_animation.test(INPUTS_ANIMATION::STEP_FWD)
+			|| inputs_animation.test(INPUTS_ANIMATION::STEP_BCK)
+			|| inputs_animation.test(INPUTS_ANIMATION::PLAY)
+			|| inputs_animation.test(INPUTS_ANIMATION::STOP)
+			|| inputs_animation.test(INPUTS_ANIMATION::SPD_UP)
+			|| inputs_animation.test(INPUTS_ANIMATION::SPD_DOWN)
+			|| inputs_animation.test(INPUTS_ANIMATION::SPD_RESET)
+			);
 	}
 
 	void _UpdateAnimation()
 	{
 		if (inputs_anim_cooldown <= 0.0f)
 		{
+			// step animation forward one frame
 			if (inputs_animation.test(INPUTS_ANIMATION::STEP_FWD))
 			{
 				inputs_anim_cooldown = inputs_anim_cooldown_length;
 				testanim_currFrame++;
 			}
-			else if (inputs_animation.test(INPUTS_ANIMATION::STEP_BCK))
+			// step animation backward one frame
+			if (inputs_animation.test(INPUTS_ANIMATION::STEP_BCK))
 			{
 				inputs_anim_cooldown = inputs_anim_cooldown_length;
 				testanim_currFrame--;
 			}
-			else if (inputs_animation.test(INPUTS_ANIMATION::PLAY))
+			// play animation
+			if (inputs_animation.test(INPUTS_ANIMATION::PLAY))
 			{
 				inputs_anim_cooldown = inputs_anim_cooldown_length;
 				anim_playing = true;
 			}
-			else if (inputs_animation.test(INPUTS_ANIMATION::STOP))
+			// stop animation
+			if (inputs_animation.test(INPUTS_ANIMATION::STOP))
 			{
 				inputs_anim_cooldown = inputs_anim_cooldown_length;
 				anim_playing = false;
 			}
+			// increase animation playback speed
+			if (inputs_animation.test(INPUTS_ANIMATION::SPD_UP))
+			{
+				testanim_p->playback_speed += anim_playbackSpeedStepAmount;
+			}
+			// decrease animation playback speed
+			if (inputs_animation.test(INPUTS_ANIMATION::SPD_DOWN))
+			{
+				testanim_p->playback_speed -= anim_playbackSpeedStepAmount;
+				if (testanim_p->playback_speed < anim_playbackSpeedStepAmount)
+					testanim_p->playback_speed = anim_playbackSpeedStepAmount;
+			}
+			// reset animation playback speed to 1.0
+			if (inputs_animation.test(INPUTS_ANIMATION::SPD_RESET))
+				testanim_p->playback_speed = 1.0f;
 		}
 
-		while (testanim_currFrame < 0)
-			testanim_currFrame += testanim_p->frame_count;
 
-		while (testanim_currFrame >= testanim_p->frame_count)
-			testanim_currFrame -= testanim_p->frame_count;
+		// clamp current frame within frames that exist
+		while (testanim_currFrame < 0)
+			testanim_currFrame += testanimdata_p->frame_count;
+
+		while (testanim_currFrame >= (int32_t)testanimdata_p->frame_count)
+			testanim_currFrame -= testanimdata_p->frame_count;
 	}
 
 	HRESULT ManualInit()
@@ -348,7 +407,7 @@ namespace DXVInterface
 		_ReadAnimationInputs(_msg);
 		_UpdateAnimation();
 
-		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->keyframes[testanim_currFrame], XMMatrixTranslation(2, 0, 0));
+		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->frames[testanim_currFrame], XMMatrixTranslation(2, 0, 0));
 	}
 	void ManualDraw()
 	{
@@ -356,6 +415,7 @@ namespace DXVInterface
 	void ManualCleanup()
 	{
 		delete testanim_p;
+		delete testanimdata_p;
 		delete testmat_p;
 		delete testmatdata_p;
 		delete testmesh_p;
