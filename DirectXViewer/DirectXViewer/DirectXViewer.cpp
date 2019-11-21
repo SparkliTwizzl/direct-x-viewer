@@ -494,7 +494,7 @@ namespace DirectXViewer
 	void D3DDrawIndexed(uint32_t _numInds) { deviceContext_p->DrawIndexed(_numInds, 0, 0); }
 #pragma endregion
 
-#pragma region Mesh/Material/Animation/Object Functions
+#pragma region Mesh Functions
 	HRESULT DXVLoadMeshData(const char* _filepath, DXVMESHDATA** _meshdata_pp)
 	{
 		HRESULT hr;
@@ -553,7 +553,9 @@ namespace DirectXViewer
 
 		return DXVCreateMesh(*_meshdata_pp, _mesh_pp);
 	}
+#pragma endregion
 
+#pragma region Material Functions
 	HRESULT DXVLoadMaterialData(const char* _filepath, DXVMATERIALDATA** _matdata_pp)
 	{
 		HRESULT hr;
@@ -672,7 +674,9 @@ namespace DirectXViewer
 
 		return DXVCreateMaterial(*_matdata_pp, _material_pp);
 	}
+#pragma endregion
 
+#pragma region Animation Functions
 	HRESULT DXVLoadAnimationData(const char* _filepath, DXVANIMATIONDATA** _animdata_pp)
 	{
 		HRESULT hr;
@@ -735,11 +739,12 @@ namespace DirectXViewer
 			animation_p->bind_pose.joint_count = numJoints;
 
 			// copy bind pose joints
-			animation_p->bind_pose.joints = new DXVANIMATION::BINDPOSE::JOINT[numJoints];
 			for (uint32_t i = 0; i < numJoints; i++)
 			{
-				animation_p->bind_pose.joints[i].global_transform = Float4x4ToXMMatrix(_animdata_p->bind_pose.joints[i].global_transform);
-				animation_p->bind_pose.joints[i].parent_index = _animdata_p->bind_pose.joints[i].parent_index;
+				DXVANIMATION::BINDPOSE::JOINT joint;
+				joint.global_transform = Float4x4ToXMMatrix(_animdata_p->bind_pose.joints[i].global_transform);
+				joint.parent_index = _animdata_p->bind_pose.joints[i].parent_index;
+				animation_p->bind_pose.joints.push_back(joint);
 			}
 
 			// copy duration
@@ -750,23 +755,18 @@ namespace DirectXViewer
 			animation_p->frame_count = numFrames;
 
 			// copy frame data
-			animation_p->frames = new DXVANIMATION::FRAME[numFrames];
-
 			for (uint32_t i = 0; i < numFrames; i++)
 			{
+				DXVANIMATION::FRAME frame;
+
 				// copy time
-				animation_p->frames[i].time = _animdata_p->frames[i].time;
+				frame.time = _animdata_p->frames[i].time;
 
 				// copy transforms
-				animation_p->frames[i].transforms = new DXVTRANSFORM[numJoints];
 				for (uint32_t t = 0; t < numJoints; t++)
-				{
-					// convert transform matrix
-					XMMATRIX transform = Float4x4ToXMMatrix(_animdata_p->frames[i].transforms[t]);
+					frame.transforms.push_back(Float4x4ToDXVTransform(_animdata_p->frames[i].transforms[t]));
 
-					// store transform
-					animation_p->frames[i].transforms[t] = XMMatrixToDXVTransform(transform);
-				}
+				animation_p->frames.push_back(frame);
 			}
 
 			hr = S_OK;
@@ -787,6 +787,23 @@ namespace DirectXViewer
 		return DXVCreateAnimation(*_animdata_pp, _animation_pp);
 	}
 
+	void DXVInterpolateAnimationFrames(DXVANIMATION::FRAME& _frame, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, float _r)
+	{
+		_frame.time = lerp(_a.time, _b.time, _r);
+
+		_frame.transforms.clear();
+
+		for (uint32_t i = 0; i < _a.transforms.size(); i++)
+		{
+			DXVTRANSFORM transform = {};
+			transform.translation = lerp(_a.transforms[i].translation, _b.transforms[i].translation, _r);
+			transform.rotation = XMQuaternionSlerp(_a.transforms[i].rotation, _b.transforms[i].rotation, _r);
+			_frame.transforms.push_back(transform);
+		}
+	}
+#pragma endregion
+
+#pragma region Object Functions
 	HRESULT DXVLoadAndCreateObject(
 		const char* _mesh_filepath, const char* _mat_filepath, const char* _anim_filepath,
 		DXVMESHDATA** _meshdata_pp, DXVMESH** _mesh_pp,
@@ -812,20 +829,6 @@ namespace DirectXViewer
 		return hr;
 	}
 
-	DXVANIMATION::FRAME DXVInterpolateAnimationFrames(uint32_t _numJoints, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, float _r)
-	{
-		DXVANIMATION::FRAME frame = {};
-		frame.transforms = new DXVTRANSFORM[_numJoints];
-
-		frame.time = lerp(_a.time, _b.time, _r);
-
-		for (uint32_t i = 0; i < _numJoints; i++)
-		{
-
-		}
-
-		return frame;
-	}
 #pragma endregion
 
 #pragma region Scene Functions
@@ -843,14 +846,26 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Conversion Functions
+	DXVTRANSFORM Float4x4ToDXVTransform(float4x4 _m)
+	{
+		DXVTRANSFORM t = {};
+		t.translation = { _m[3].x, _m[3].y, _m[3].z, _m[3].w };
+		XMMATRIX rotation =
+		{
+			_m[0].x, _m[0].y, _m[0].z, _m[0].w,
+			_m[1].x, _m[1].y, _m[1].z, _m[1].w,
+			_m[2].x, _m[2].y, _m[2].z, _m[2].w,
+			0, 0, 0, 1
+		};
+		t.rotation = XMQuaternionRotationMatrix(rotation);
+		return t;
+	}
 	DXVTRANSFORM XMMatrixToDXVTransform(XMMATRIX _m)
 	{
 		DXVTRANSFORM t = {};
-
 		t.translation = _m.r[3];
 		_m.r[3] = { 0, 0, 0, 1 };
 		t.rotation = XMQuaternionRotationMatrix(_m);
-
 		return t;
 	}
 
@@ -858,7 +873,6 @@ namespace DirectXViewer
 	{
 		XMMATRIX m = XMMatrixRotationQuaternion(_t.rotation);
 		m.r[3] = _t.translation;
-
 		return m;
 	}
 	XMMATRIX inline Float4x4ToXMMatrix(float4x4 _m)
@@ -877,6 +891,15 @@ namespace DirectXViewer
 
 #pragma region Math Functions
 	double inline lerp(double _a, double _b, double _r) { return (_b - _a) * _r + _a; }
+	XMVECTOR lerp(XMVECTOR _a, XMVECTOR _b, double _r)
+	{
+		return {
+			float(lerp(XMVectorGetX(_a), XMVectorGetX(_b), _r)),
+			float(lerp(XMVectorGetY(_a), XMVectorGetY(_b), _r)),
+			float(lerp(XMVectorGetZ(_a), XMVectorGetZ(_b), _r)),
+			float(lerp(XMVectorGetW(_a), XMVectorGetW(_b), _r))
+		};
+	}
 #pragma endregion
 
 #pragma region D3D Helper Functions
@@ -1012,10 +1035,12 @@ namespace DirectXViewer
 	}
 	void debug_AddSkeletonToDebugRenderer(DXVANIMATION::BINDPOSE* _bindpose_p, XMMATRIX _offset)
 	{
-		DXVANIMATION::FRAME frame;
-		frame.transforms = new DXVTRANSFORM[_bindpose_p->joint_count];
+		DXVANIMATION::FRAME frame = {};
+
+		frame.time = -1.0f;
+
 		for (uint32_t i = 0; i < _bindpose_p->joint_count; i++)
-			frame.transforms[i] = XMMatrixToDXVTransform(_bindpose_p->joints[i].global_transform);
+			frame.transforms.push_back(XMMatrixToDXVTransform(_bindpose_p->joints[i].global_transform));
 
 		debug_AddSkeletonToDebugRenderer(_bindpose_p, &frame, _offset);
 	}

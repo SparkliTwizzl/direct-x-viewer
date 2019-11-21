@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <array>
 #include <cstdint>
+#include <vector>
 
 #include <d3d11.h>
 #pragma comment(lib, "d3d11.lib")
@@ -306,40 +307,25 @@ namespace DirectXViewer
 		{
 			struct JOINT
 			{
-				XMMATRIX	global_transform = {};
-				int32_t		parent_index = -1;
+				XMMATRIX				global_transform = {};
+				int32_t					parent_index = -1;
 			};
 
-			uint32_t	joint_count = 0;
-			JOINT*		joints = nullptr;
-
-			~BINDPOSE()
-			{
-				delete[] joints;
-			}
+			uint32_t					joint_count = 0;
+			std::vector<JOINT>			joints;
 		};
 
 		struct FRAME
 		{
-			double			time = 0.0f;
-			DXVTRANSFORM*	transforms = nullptr;
-
-			~FRAME()
-			{
-				delete[] transforms;
-			}
+			double						time = 0.0f;
+			std::vector<DXVTRANSFORM>	transforms;
 		};
 
-		BINDPOSE	bind_pose;
-		double		playback_speed = 1.0f;
-		double		duration = 0.0f;
-		uint32_t	frame_count = 0;
-		FRAME*		frames = nullptr;
-
-		~DXVANIMATION()
-		{
-			delete[] frames;
-		}
+		BINDPOSE						bind_pose;
+		double							playback_speed = 1.0f;
+		double							duration = 0.0f;
+		uint32_t						frame_count = 0;
+		std::vector<FRAME>				frames;
 	};
 
 	// DXV object data container
@@ -374,11 +360,14 @@ namespace DirectXViewer
 	//  Must have both mesh and material to be used by scene
 	struct DXVOBJECT
 	{
-		XMMATRIX		model_matrix = XMMatrixIdentity();
-		DXVMESH*		mesh_p = nullptr;
-		DXVMATERIAL*	material_p = nullptr;
-		DXVANIMATION*	animation_p = nullptr;
-		float			anim_time;
+		DXVMESH*				mesh_p = nullptr;
+		DXVMATERIAL*			material_p = nullptr;
+		DXVANIMATION*			animation_p = nullptr;
+
+		XMMATRIX				model_matrix = XMMatrixIdentity();
+		bool					anim_playing = false;
+		float					anim_time = 0.0f;
+		DXVANIMATION::FRAME		anim_currFrame;
 
 		~DXVOBJECT()
 		{
@@ -563,7 +552,7 @@ namespace DirectXViewer
 
 
 	// Interpolates positions and rotations of joints in animation frames
-	DXVANIMATIONDATA::FRAME DXVInterpolateAnimationFrames(uint32_t _numJoints, DXVANIMATIONDATA::FRAME _a, DXVANIMATIONDATA::FRAME _b, float _r);
+	void DXVInterpolateAnimationFrames(DXVANIMATION::FRAME& _frame, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, float _r);
 #pragma endregion
 
 #pragma region Object Functions
@@ -640,7 +629,10 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Conversion Functions
-	// Convets an XMMATRIX into a DXVTRANSFORM
+	// Converts a mathtypes float4x4 into a DXVTRANSFORM
+	DXVTRANSFORM Float4x4ToDXVTransform(float4x4 _m);
+
+	// Converts an XMMATRIX into a DXVTRANSFORM
 	DXVTRANSFORM XMMatrixToDXVTransform(XMMATRIX _m);
 
 
@@ -656,8 +648,11 @@ namespace DirectXViewer
 #pragma endregion
 
 #pragma region Math Functions
-	// Linear interpolation
+	// Linear interpolation of doubles
 	double inline lerp(double _a, double _b, double _r);
+
+	// Linear interpolation of XMVECTORs
+	XMVECTOR lerp(XMVECTOR _a, XMVECTOR _b, double _r);
 #pragma endregion
 
 #pragma region Debug Functions
