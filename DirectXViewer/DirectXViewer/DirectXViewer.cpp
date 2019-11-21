@@ -364,6 +364,23 @@ namespace DirectXViewer
 		XMVECTOR t_light_pos = { light_pos.x, light_pos.y, light_pos.z };
 		t_light_pos = (XMMatrixTranslationFromVector(t_light_pos) * XMMatrixRotationY(light_rotationSpeed * _dt)).r[3];
 		light_pos = { XMVectorGetX(t_light_pos), XMVectorGetY(t_light_pos), XMVectorGetZ(t_light_pos) };
+
+		// update object animations
+		for (uint32_t i = 0; i < sceneObjects.size(); i++)
+		{
+			if (sceneObjects[i]->anim_playing)
+			{
+				// advance animation
+				sceneObjects[i]->anim_currTime += _dt * sceneObjects[i]->animation_p->playback_speed;
+
+				// loop animation
+				while (sceneObjects[i]->anim_currTime > sceneObjects[i]->animation_p->duration)
+					sceneObjects[i]->anim_currTime -= sceneObjects[i]->animation_p->duration;
+
+				// get interpolated animation frame from current animation time
+				DetermineCurrentAnimationFrame(sceneObjects[i]->anim_currFrame, sceneObjects[i]->animation_p, sceneObjects[i]->anim_currTime);
+			}
+		}
 	}
 	void Cleanup()
 	{
@@ -787,7 +804,7 @@ namespace DirectXViewer
 		return DXVCreateAnimation(*_animdata_pp, _animation_pp);
 	}
 
-	void DXVInterpolateAnimationFrames(DXVANIMATION::FRAME& _frame, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, float _r)
+	void InterpolateAnimationFrames(DXVANIMATION::FRAME& _frame, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, double _r)
 	{
 		_frame.time = lerp(_a.time, _b.time, _r);
 
@@ -797,9 +814,52 @@ namespace DirectXViewer
 		{
 			DXVTRANSFORM transform = {};
 			transform.translation = lerp(_a.transforms[i].translation, _b.transforms[i].translation, _r);
-			transform.rotation = XMQuaternionSlerp(_a.transforms[i].rotation, _b.transforms[i].rotation, _r);
+			transform.rotation = XMQuaternionSlerp(_a.transforms[i].rotation, _b.transforms[i].rotation, float(_r));
 			_frame.transforms.push_back(transform);
 		}
+	}
+	void DetermineCurrentAnimationFrame(DXVANIMATION::FRAME& _frame, DXVANIMATION* _animation_p, double _t)
+	{
+		int32_t a = -1, b = -1;
+		double t_a = 0.0f, t_b = 0.0f;
+
+		// determine frames to interpolate between
+		for (uint32_t i = 0; i < _animation_p->frame_count; i++)
+			if (_animation_p->frames[i].time > _t)
+			{
+				a = i - 1;
+				b = i;
+				break;
+			}
+
+		// handle edge cases at ends of animation
+		// if t < frames[0].time || t > frames[size - 1].time
+		if (a == -1)
+		{
+			// set a to last frame and b to first
+			a = _animation_p->frame_count - 1;
+			b = 0;
+
+			// adjust times to account for time before first frame and after last frame
+			_t = _t + _animation_p->duration - _animation_p->frames[a].time;
+			while (_t > _animation_p->duration)
+				_t -= _animation_p->duration;
+
+			t_b = _animation_p->frames[b].time + _animation_p->duration - _animation_p->frames[a].time;
+			t_a = 0.0f;
+		}
+		else
+		{
+			// get unaltered times
+			t_a = _animation_p->frames[a].time;
+			t_b = _animation_p->frames[b].time;
+		}
+
+		// determine ratio d between frames
+		double d = (_t - t_a) / (t_b - t_a);
+
+		// get interpolated frame
+		InterpolateAnimationFrames(_frame, _animation_p->frames[a], _animation_p->frames[b], d);
 	}
 #pragma endregion
 
@@ -825,6 +885,8 @@ namespace DirectXViewer
 		_object_p->mesh_p = *_mesh_pp;
 		_object_p->material_p = *_material_pp;
 		_object_p->animation_p = *_animation_pp;
+
+		_object_p->anim_currFrame = _object_p->animation_p->frames[0];
 
 		return hr;
 	}

@@ -92,7 +92,7 @@ namespace DXVInterface
 #define INPUT_ANIM_SPD_UP		VK_UP
 #define INPUT_ANIM_SPD_DOWN		VK_DOWN
 #define INPUT_ANIM_SPD_RESET	'0'
-	
+
 	struct INPUTS_ANIMATION
 	{
 		enum
@@ -114,7 +114,6 @@ namespace DXVInterface
 	float									inputs_anim_cooldown = 0.0f;
 
 	int32_t									anim_currFrame = 0;
-	bool									anim_playing = false;
 	const float								anim_playbackSpeedStepAmount = 0.1f;
 #pragma endregion
 
@@ -337,13 +336,13 @@ namespace DXVInterface
 			if (inputs_animation.test(INPUTS_ANIMATION::PLAY))
 			{
 				inputs_anim_cooldown = inputs_anim_cooldown_length;
-				anim_playing = true;
+				testobj.anim_playing = true;
 			}
 			// stop animation
 			if (inputs_animation.test(INPUTS_ANIMATION::STOP))
 			{
 				inputs_anim_cooldown = inputs_anim_cooldown_length;
-				anim_playing = false;
+				testobj.anim_playing = false;
 			}
 			// increase animation playback speed
 			if (inputs_animation.test(INPUTS_ANIMATION::SPD_UP))
@@ -379,7 +378,7 @@ namespace DXVInterface
 	HRESULT ManualInit()
 	{
 		HRESULT hr;
-		
+
 		DirectXViewer::D3DSetClearColor(clearColor);
 
 		XMVECTOR eye = { 0, 7, 10 };
@@ -404,10 +403,10 @@ namespace DXVInterface
 		_ReadAnimationInputs(_msg);
 		_UpdateAnimation();
 
-		DirectXViewer::DXVInterpolateAnimationFrames(testobj.anim_currFrame, testanim_p->frames[0], testanim_p->frames[10], 0.5f);
-
-		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->frames[anim_currFrame], XMMatrixTranslation(2, 0, 0));
-		DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testobj.anim_currFrame, XMMatrixTranslation(5, 0, 0));
+		if (testobj.anim_playing)
+			DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testobj.anim_currFrame, XMMatrixTranslation(2, 0, 0));
+		else
+			DirectXViewer::debug_AddSkeletonToDebugRenderer(&testanim_p->bind_pose, &testanim_p->frames[anim_currFrame], XMMatrixTranslation(2, 0, 0));
 	}
 	void ManualDraw()
 	{

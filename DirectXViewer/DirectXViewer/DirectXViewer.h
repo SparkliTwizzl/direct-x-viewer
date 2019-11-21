@@ -366,8 +366,8 @@ namespace DirectXViewer
 
 		XMMATRIX				model_matrix = XMMatrixIdentity();
 		bool					anim_playing = false;
-		float					anim_time = 0.0f;
-		DXVANIMATION::FRAME		anim_currFrame;
+		double					anim_currTime = 0.0f; // Current animation playback time
+		DXVANIMATION::FRAME		anim_currFrame; // Interpolated frame to use during updates
 
 		~DXVOBJECT()
 		{
@@ -552,7 +552,10 @@ namespace DirectXViewer
 
 
 	// Interpolates positions and rotations of joints in animation frames
-	void DXVInterpolateAnimationFrames(DXVANIMATION::FRAME& _frame, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, float _r);
+	void InterpolateAnimationFrames(DXVANIMATION::FRAME& _frame, DXVANIMATION::FRAME _a, DXVANIMATION::FRAME _b, double _r);
+
+	// Determines the current frame of an animation from its duration, playback speed, and current time
+	void DetermineCurrentAnimationFrame(DXVANIMATION::FRAME& _frame, DXVANIMATION* _animation_p, double _t);
 #pragma endregion
 
 #pragma region Object Functions
